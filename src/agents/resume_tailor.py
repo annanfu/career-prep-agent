@@ -140,16 +140,11 @@ def resume_tailor_node(state: GraphState) -> dict:
     )
     print(f"  Draft length: {len(tailored)} chars")
 
-    print("[Node 2] Generating STAR stories from matched experiences...")
-    stories = _generate_star_stories(
-        state["matched_experiences"],
-        state["jd_requirements"],
-    )
-    print(f"  {len(stories)} STAR stories generated")
-
+    # STAR stories skipped for speed — can be generated on-demand
+    # via interview prep pipeline instead
     return {
         "draft_content": tailored,
-        "star_stories": stories,
+        "star_stories": [],
     }
 
 

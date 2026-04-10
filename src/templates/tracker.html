@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Application Tracker — Career Prep Agent{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="bg-white border border-stone-200 rounded-xl p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-stone-700">Application Tracker</h2>
+      <div class="flex gap-2">
+        <button onclick="deleteSelectedRows()"
+                class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-medium py-2 px-4 rounded-lg border border-rose-200 transition">
+          Delete Selected
+        </button>
+        <button onclick="saveTracker()"
+                class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition">
+          Save Changes
+        </button>
+      </div>
+    </div>
+    <div id="tracker-toast" class="mb-2"></div>
+    <div hx-get="/api/tracker/data" hx-trigger="load" hx-swap="innerHTML" id="tracker-container">
+      <p class="text-sm text-stone-400">Loading tracker...</p>
+    </div>
+  </div>
+
+  <div id="interview-prep-panel" class="hidden bg-white border border-stone-200 rounded-xl">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+      <div>
+        <h2 class="text-sm font-semibold text-stone-700">Interview Prep</h2>
+        <p id="prep-subtitle" class="text-sm text-stone-400 mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <a id="prep-download-btn" href="#" download
+           class="hidden text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
+          Download
+        </a>
+        <button onclick="closePrep()"
+                class="text-sm text-stone-400 hover:text-stone-600 py-1.5 px-2 transition">
+          Close
+        </button>
+      </div>
+    </div>
+    <div id="interview-prep-content" class="p-5"></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% set steps = [
+  {"id": "deep_retriever", "label": "Retrieve Experiences", "desc": "Deep search knowledge base for relevant stories and evidence"},
+  {"id": "company_researcher", "label": "Research Company", "desc": "Gather company background, culture, and recent news"},
+  {"id": "question_researcher", "label": "Research Questions", "desc": "Identify likely interview questions for this role"},
+  {"id": "content_generator", "label": "Generate Prep Document", "desc": "Compile everything into a structured interview prep guide"},
+] %}
+
+{% set step_order = ["deep_retriever", "company_researcher", "question_researcher", "content_generator"] %}
+{% set current = progress | default("") %}
+
+{# The first 3 run in parallel, so if any of them is current, all 3 are "in progress" #}
+{% set parallel_nodes = ["deep_retriever", "company_researcher", "question_researcher"] %}
+{% set in_parallel = current in parallel_nodes %}
+{% set past_parallel = current == "content_generator" %}
+
+<div hx-get="{{ poll_url }}"
+     hx-trigger="every 2s" hx-swap="outerHTML"
+     class="border border-stone-200 rounded-xl p-5 bg-white">
+
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="animate-spin h-4 w-4 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+    <span class="text-sm font-medium text-stone-600">Preparing interview...</span>
+  </div>
+
+  <div class="space-y-3">
+    {% for step in steps %}
+      {% set is_parallel_step = step.id in parallel_nodes %}
+
+      {% if is_parallel_step %}
+        {% set is_done = past_parallel %}
+        {% set is_current = in_parallel %}
+      {% else %}
+        {% set is_done = false %}
+        {% set is_current = (current == step.id) %}
+      {% endif %}
+
+      <div class="flex items-start gap-3">
+        {% if is_done %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        {% elif is_current %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+        </div>
+        {% else %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-stone-300"></div>
+        </div>
+        {% endif %}
+
+        <div>
+          <p class="text-sm {% if is_done %}text-emerald-700 font-medium{% elif is_current %}text-teal-700 font-medium{% else %}text-stone-400{% endif %}">
+            {{ step.label }}{% if is_parallel_step and not past_parallel and not in_parallel %}{% endif %}
+          </p>
+          <p class="text-sm {% if is_current %}text-stone-500{% else %}text-stone-400{% endif %}">
+            {{ step.desc }}
+          </p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

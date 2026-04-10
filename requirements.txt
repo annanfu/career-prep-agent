@@ -14,3 +14,7 @@ pandas
 numpy
 sentence-transformers
 tavily-python
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart

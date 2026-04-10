@@ -1,0 +1,150 @@
+<!-- Metrics -->
+<div class="grid grid-cols-3 gap-4 mb-5">
+  <div class="bg-white border border-stone-200 rounded-xl p-4 text-center">
+    <p class="text-sm text-stone-500">Fit Score</p>
+    <p class="text-2xl font-semibold mt-1 {% if fit_score >= 3.5 %}text-emerald-600{% elif fit_score >= 2.5 %}text-amber-500{% else %}text-rose-500{% endif %}">
+      {{ fit_score }}/5
+    </p>
+    <p class="text-sm text-stone-400">({{ fit_grade }})</p>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-xl p-4 text-center">
+    <p class="text-sm text-stone-500">Keyword Coverage</p>
+    <p class="text-2xl font-semibold mt-1 text-stone-700">{{ "%.0f"|format(keyword_coverage * 100) }}%</p>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-xl p-4 text-center">
+    <p class="text-sm text-stone-500">Revisions</p>
+    <p class="text-2xl font-semibold mt-1 text-stone-700">{{ revision_count }}</p>
+  </div>
+</div>
+
+{% if fit_score < 3.5 %}
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-sm text-amber-700">
+  {{ fit_score }}/5 ({{ fit_grade }}) — Low fit, consider skipping
+</div>
+{% else %}
+<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-5 text-sm text-emerald-700">
+  {{ fit_score }}/5 ({{ fit_grade }}) — Good fit
+</div>
+{% endif %}
+
+<!-- Resume editor -->
+<div class="bg-white border border-stone-200 rounded-xl p-5 mb-5">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-sm font-medium text-stone-700">Tailored Resume</h3>
+    <div class="flex gap-2">
+      <button onclick="togglePreview()"
+              class="text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
+        Preview
+      </button>
+      <a href="/api/download/resume/{{ resume_filename }}" download="{{ resume_filename }}"
+         class="text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
+        Download
+      </a>
+      <button hx-post="/api/pipeline/save-resume" hx-include="#resume-editor"
+              hx-target="#save-toast" hx-swap="innerHTML"
+              class="text-sm bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3 rounded-lg transition">
+        Save
+      </button>
+    </div>
+  </div>
+  <div id="save-toast" class="mb-2"></div>
+  <input type="hidden" name="saved_resume_path" value="{{ saved_resume_path }}" />
+  <textarea id="resume-editor" name="resume_content" rows="20"
+            class="w-full font-mono">{{ resume_content }}</textarea>
+  <div id="resume-preview" class="hidden prose max-w-none mt-4 p-4 bg-stone-50 rounded-lg text-sm"></div>
+</div>
+
+<!-- Pipeline details -->
+<details class="bg-white border border-stone-200 rounded-xl mb-5">
+  <summary class="px-5 py-4 cursor-pointer text-sm font-medium text-stone-600 hover:bg-stone-50 rounded-xl">
+    Pipeline Details
+  </summary>
+  <div class="px-5 pb-5 space-y-5">
+
+    {% if change_summary %}
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">Change Summary</h4>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="bg-emerald-50 rounded-lg p-3 text-center">
+          <p class="text-sm text-emerald-600">Added</p>
+          <p class="text-lg font-semibold text-emerald-700">{{ change_summary.get('keywords_added', [])|length }}</p>
+        </div>
+        <div class="bg-rose-50 rounded-lg p-3 text-center">
+          <p class="text-sm text-rose-600">Missing</p>
+          <p class="text-lg font-semibold text-rose-700">{{ change_summary.get('keywords_missing', [])|length }}</p>
+        </div>
+        <div class="bg-teal-50 rounded-lg p-3 text-center">
+          <p class="text-sm text-teal-600">Coverage</p>
+          <p class="text-lg font-semibold text-teal-700">{{ "%.0f"|format(change_summary.get('keyword_coverage', 0) * 100) }}%</p>
+        </div>
+      </div>
+      {% if change_summary.get('keywords_added') %}
+      <p class="text-sm text-stone-500"><span class="font-medium">Added:</span>
+        {% for k in change_summary.keywords_added %}<code class="bg-emerald-50 text-emerald-700 px-1 rounded">{{ k }}</code> {% endfor %}
+      </p>
+      {% endif %}
+      {% if change_summary.get('keywords_missing') %}
+      <p class="text-sm text-stone-500 mt-1"><span class="font-medium">Missing:</span>
+        {% for k in change_summary.keywords_missing %}<code class="bg-rose-50 text-rose-700 px-1 rounded">{{ k }}</code> {% endfor %}
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">JD Analysis</h4>
+      <pre class="bg-stone-50 rounded-lg p-3 text-sm overflow-x-auto max-h-64 overflow-y-auto border border-stone-100">{{ jd_requirements | tojson(indent=2) }}</pre>
+    </div>
+
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">Matched Experiences</h4>
+      {% if matched_experiences %}
+        {% for exp in matched_experiences %}
+        <details class="border border-stone-200 rounded-lg mb-2">
+          <summary class="px-3 py-2 text-sm cursor-pointer hover:bg-stone-50">
+            {% if exp.relevance_score >= 0.7 %}
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>
+            {% elif exp.relevance_score >= 0.4 %}
+              <span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>
+            {% else %}
+              <span class="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1"></span>
+            {% endif %}
+            [{{ "%.2f"|format(exp.relevance_score) }}] {{ exp.requirement or '—' }} · {{ exp.source_doc }}
+          </summary>
+          <div class="px-3 pb-3 text-sm text-stone-500">{{ exp.evidence[:400] }}</div>
+        </details>
+        {% endfor %}
+      {% else %}
+        <p class="text-sm text-stone-400">No relevant matches found.</p>
+      {% endif %}
+    </div>
+
+    {% if gaps %}
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">Gaps</h4>
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">{{ gaps | join(', ') }}</div>
+    </div>
+    {% endif %}
+
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">Review Feedback</h4>
+      <p class="text-sm text-stone-500">{{ review_feedback or 'No issues found.' }}</p>
+    </div>
+
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">STAR Stories</h4>
+      {% for story in star_stories %}
+      <details class="border border-stone-200 rounded-lg mb-2">
+        <summary class="px-3 py-2 text-sm cursor-pointer hover:bg-stone-50 font-medium">{{ story.get('experience_name', 'Story') }}</summary>
+        <div class="px-3 pb-3 text-sm text-stone-500 space-y-1">
+          <p><strong>Requirement:</strong> {{ story.get('jd_requirement', '') }}</p>
+          <p><strong>S:</strong> {{ story.get('situation', '') }}</p>
+          <p><strong>T:</strong> {{ story.get('task', '') }}</p>
+          <p><strong>A:</strong> {{ story.get('action', '') }}</p>
+          <p><strong>R:</strong> {{ story.get('result', '') }}</p>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</details>

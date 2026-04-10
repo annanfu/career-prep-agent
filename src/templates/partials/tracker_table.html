@@ -1,0 +1,97 @@
+{% if rows %}
+<div class="overflow-x-auto">
+  <table id="tracker-table" class="w-full text-sm">
+    <thead>
+      <tr class="text-left text-sm text-stone-400 border-b border-stone-100">
+        <th class="px-2 py-2.5 w-8">
+          <input type="checkbox" id="select-all" onclick="toggleSelectAll(this)" class="rounded border-stone-300" />
+        </th>
+        <th class="px-3 py-2.5 font-medium">Date</th>
+        <th class="px-3 py-2.5 font-medium">Company</th>
+        <th class="px-3 py-2.5 font-medium">Role</th>
+        <th class="px-3 py-2.5 font-medium">Fit</th>
+        <th class="px-3 py-2.5 font-medium">Status</th>
+        <th class="px-3 py-2.5 font-medium">Notes</th>
+        <th class="px-3 py-2.5 font-medium">Resume</th>
+        <th class="px-3 py-2.5 font-medium">URL</th>
+        <th class="px-3 py-2.5 font-medium">Prep</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-stone-50">
+      {% for row in rows %}
+      <tr class="hover:bg-stone-50/50 tracker-row">
+        <td class="px-2 py-2.5">
+          <input type="checkbox" class="row-select rounded border-stone-300" />
+        </td>
+        <td class="px-3 py-2.5 text-stone-500">{{ row.get('date', '') }}</td>
+        <td class="px-3 py-2.5 font-medium text-stone-700">
+          <input type="hidden" name="rows[{{ loop.index0 }}][company]" value="{{ row.get('company', '') }}" />
+          {{ row.get('company', '') }}
+        </td>
+        <td class="px-3 py-2.5 text-stone-500">
+          <input type="hidden" name="rows[{{ loop.index0 }}][role]" value="{{ row.get('role', '') }}" />
+          {{ row.get('role', '') }}
+        </td>
+        <td class="px-3 py-2.5">
+          {% set fs = row.get('fit_score', 0) | float %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-sm font-medium
+                       {% if fs >= 3.5 %}bg-emerald-50 text-emerald-700{% elif fs >= 2.5 %}bg-amber-50 text-amber-700{% else %}bg-rose-50 text-rose-700{% endif %}">
+            {{ fs }}/5
+          </span>
+          <input type="hidden" name="rows[{{ loop.index0 }}][fit_score]" value="{{ fs }}" />
+        </td>
+        <td class="px-3 py-2.5">
+          <select name="rows[{{ loop.index0 }}][status]" class="py-1.5 px-2">
+            {% for opt in status_options %}
+            <option value="{{ opt }}" {% if row.get('status', '') == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="px-3 py-2.5">
+          <input type="text" name="rows[{{ loop.index0 }}][notes]" value="{{ row.get('notes', '') }}"
+                 class="py-1.5 px-2 w-full" />
+        </td>
+        <td class="px-3 py-2.5">
+          {% if row.get('resume_filename') %}
+          <a href="/api/download/resume/{{ row.resume_filename }}" download="{{ row.resume_filename }}"
+             class="text-teal-600 hover:text-teal-700 font-medium">Download</a>
+          {% endif %}
+          <input type="hidden" name="rows[{{ loop.index0 }}][resume_filename]" value="{{ row.get('resume_filename', '') }}" />
+          <input type="hidden" name="rows[{{ loop.index0 }}][date]" value="{{ row.get('date', '') }}" />
+          <input type="hidden" name="rows[{{ loop.index0 }}][fit_grade]" value="{{ row.get('fit_grade', '') }}" />
+          <input type="hidden" name="rows[{{ loop.index0 }}][jd_filename]" value="{{ row.get('jd_filename', '') }}" />
+          <input type="hidden" name="rows[{{ loop.index0 }}][stories_filename]" value="{{ row.get('stories_filename', '') }}" />
+        </td>
+        <td class="px-3 py-2.5">
+          {% if row.get('jd_url') %}
+          <a href="{{ row.jd_url }}" target="_blank" class="text-teal-600 hover:text-teal-700 font-medium">Link</a>
+          {% endif %}
+          <input type="hidden" name="rows[{{ loop.index0 }}][jd_url]" value="{{ row.get('jd_url', '') }}" />
+        </td>
+        <td class="px-3 py-2.5">
+          {% if row.get('status') == 'interview' %}
+            {% if row.get('has_prep') %}
+            <div class="flex gap-1">
+              <button onclick="viewPrep('{{ row.get('company','') }}', '{{ row.get('role','') }}')"
+                      class="text-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-1 px-2.5 rounded-md border border-emerald-200 transition">
+                View
+              </button>
+              <button onclick="regeneratePrep('{{ row.get('resume_filename','') }}', '{{ row.get('jd_filename','') }}', '{{ row.get('company','') }}', '{{ row.get('role','') }}')"
+                      class="text-sm text-stone-400 hover:text-stone-600 py-1 px-1.5 transition" title="Regenerate">&#x21bb;</button>
+            </div>
+            {% else %}
+            <button onclick="regeneratePrep('{{ row.get('resume_filename','') }}', '{{ row.get('jd_filename','') }}', '{{ row.get('company','') }}', '{{ row.get('role','') }}')"
+                    class="text-sm bg-teal-600 hover:bg-teal-700 text-white py-1 px-2.5 rounded-md transition">
+              Generate
+            </button>
+            {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-sm text-stone-400 py-6 text-center">No applications tracked yet. Generate a tailored resume to add your first entry.</p>
+{% endif %}

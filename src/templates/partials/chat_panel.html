@@ -1,0 +1,30 @@
+<div class="flex flex-col h-full">
+  <div class="flex gap-3 p-3 border-b border-stone-100 bg-stone-50/50">
+    <label class="flex items-center gap-1.5 text-sm text-stone-500 cursor-pointer">
+      <input type="radio" name="chat_mode" value="resume" checked
+             class="text-teal-600 focus:ring-teal-400" onchange="setChatMode(this.value)" />
+      Refine Resume
+    </label>
+    <label class="flex items-center gap-1.5 text-sm text-stone-500 cursor-pointer">
+      <input type="radio" name="chat_mode" value="interview"
+             class="text-teal-600 focus:ring-teal-400" onchange="setChatMode(this.value)" />
+      Interview Prep
+    </label>
+  </div>
+
+  <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-3">
+    <p class="text-stone-400 text-sm text-center mt-8">
+      Generate a tailored resume or load interview prep to start chatting.
+    </p>
+  </div>
+
+  <form id="chat-form" onsubmit="sendChat(event)" hx-boost="false" class="p-3 border-t border-stone-100">
+    <div class="flex gap-2">
+      <input type="text" id="chat-input" placeholder="Ask me anything..." class="flex-1 py-2" />
+      <button type="submit"
+              class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition">
+        Send
+      </button>
+    </div>
+  </form>
+</div>

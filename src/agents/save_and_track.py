@@ -18,16 +18,17 @@ STORIES_DIR = OUTPUT_DIR / "stories"
 TRACKER_CSV = OUTPUT_DIR / "tracker.csv"
 
 TRACKER_COLUMNS = [
-    "date_applied",
     "company",
     "role",
-    "jd_url",
-    "resume_filename",
-    "jd_filename",
     "fit_score",
-    "fit_grade",
     "status",
     "notes",
+    "resume_filename",
+    "date",
+    "fit_grade",
+    "jd_filename",
+    "stories_filename",
+    "jd_url",
 ]
 
 
@@ -198,16 +199,17 @@ def save_and_track_node(state: GraphState) -> dict:
 
     # 4. Append to tracker.csv
     tracker_row = {
-        "date_applied": date.today().isoformat(),
         "company": state.get("company_name") or jd_req.get("company", ""),
         "role": state.get("target_role") or jd_req.get("role", ""),
-        "jd_url": jd_req.get("jd_url") or state.get("jd_url") or "",
-        "resume_filename": resume_path.name,
-        "jd_filename": jd_path.name,
         "fit_score": jd_req.get("fit_score", ""),
-        "fit_grade": jd_req.get("fit_grade", ""),
         "status": "applied",
         "notes": "",
+        "resume_filename": resume_path.name,
+        "date": date.today().isoformat(),
+        "fit_grade": jd_req.get("fit_grade", ""),
+        "jd_filename": jd_path.name,
+        "stories_filename": stories_path.name,
+        "jd_url": jd_req.get("jd_url") or state.get("jd_url") or "",
     }
     _append_tracker(tracker_row)
     print(f"  Tracker       : {TRACKER_CSV} (row appended)")

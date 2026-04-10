@@ -13,10 +13,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
+COPY base_resume/ ./base_resume/
 
-EXPOSE 8501
+EXPOSE 8000
 
-CMD ["streamlit", "run", "src/main.py", \
-     "--server.port=8501", \
-     "--server.address=0.0.0.0", \
-     "--server.headless=true"]
+CMD ["uvicorn", "src.api.app:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000"]

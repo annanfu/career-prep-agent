@@ -1,0 +1,58 @@
+{% set steps = [
+  {"id": "jd_analyzer_matcher", "label": "Analyze JD & Match", "desc": "Parse requirements, retrieve matching experiences from knowledge base"},
+  {"id": "resume_tailor", "label": "Tailor Resume", "desc": "Rewrite bullets to match JD requirements"},
+  {"id": "quality_reviewer", "label": "Quality Review", "desc": "Check keyword coverage and verify faithfulness"},
+  {"id": "save_and_track", "label": "Save & Track", "desc": "Save resume, archive JD, update application tracker"},
+] %}
+
+{% set step_order = ["jd_analyzer_matcher", "resume_tailor", "quality_reviewer", "save_and_track"] %}
+{% set current = progress | default("") %}
+{% set current_idx = step_order.index(current) if current in step_order else -1 %}
+
+<div hx-get="{{ poll_url | default('/api/pipeline/status/' + task_id) }}"
+     hx-trigger="every 2s" hx-swap="outerHTML"
+     class="border border-stone-200 rounded-xl p-5 bg-white">
+
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="animate-spin h-4 w-4 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+    <span class="text-sm font-medium text-stone-600">{{ message | default("Running pipeline...") }}</span>
+  </div>
+
+  <div class="space-y-3">
+    {% for step in steps %}
+      {% set step_idx = loop.index0 %}
+      {% set is_done = current_idx > step_idx %}
+      {% set is_current = current_idx == step_idx %}
+
+      <div class="flex items-start gap-3">
+        {% if is_done %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        {% elif is_current %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+        </div>
+        {% else %}
+        <div class="mt-0.5 w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
+          <div class="w-2 h-2 rounded-full bg-stone-300"></div>
+        </div>
+        {% endif %}
+
+        <div>
+          <p class="text-sm {% if is_done %}text-emerald-700 font-medium{% elif is_current %}text-teal-700 font-medium{% else %}text-stone-400{% endif %}">
+            {{ step.label }}
+          </p>
+          <p class="text-sm {% if is_current %}text-stone-500{% else %}text-stone-400{% endif %}">
+            {{ step.desc }}
+          </p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

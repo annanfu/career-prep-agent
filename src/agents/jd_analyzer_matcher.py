@@ -50,76 +50,88 @@ def _parse_jd(jd_text: str) -> dict:
 # Step 2: RAG — retrieve and score experience chunks
 # ---------------------------------------------------------------------------
 
-def _score_chunk_vs_requirements(
-    chunk: str,
+def _score_all_chunks_batch(
+    chunks: list[dict],
     requirements: list[str],
-) -> tuple[str, float]:
-    """Score a chunk against all requirements in one LLM call.
-
-    Returns the best-matching requirement and its relevance score.
-    Using a single batched call instead of one call per requirement
-    keeps total LLM calls equal to the number of chunks (not N×M).
+) -> list[tuple[str, float]]:
+    """Score ALL chunks against requirements in a SINGLE LLM call.
 
     Args:
-        chunk: Retrieved knowledge base text.
-        requirements: List of JD required skills / responsibilities.
+        chunks: List of chunk dicts with 'content' field.
+        requirements: List of JD required skills.
 
     Returns:
-        Tuple of (best_requirement, score 0.0–1.0).
+        List of (best_requirement, score) tuples, one per chunk.
     """
-    if not requirements:
-        return "", 0.0
+    if not requirements or not chunks:
+        return [("", 0.0)] * len(chunks)
 
-    llm = get_fast_llm(temperature=0)
     req_list = "\n".join(
         f"{i + 1}. {r}" for i, r in enumerate(requirements)
     )
-    # Truncate chunk to avoid token limits
-    chunk_trimmed = chunk[:600]
 
-    # Step 1: ask which requirement number best matches + score
-    prompt = (
-        "You are a resume screener.\n\n"
-        f"Requirements (numbered):\n{req_list}\n\n"
-        f"Experience snippet:\n{chunk_trimmed}\n\n"
-        "Reply with TWO lines only, no extra text:\n"
-        "LINE 1: the requirement number that best matches (e.g. 2)\n"
-        "LINE 2: relevance score 0.0-1.0 (e.g. 0.8)"
+    chunk_list = "\n\n".join(
+        f"[CHUNK {i + 1}]\n{c['content'][:400]}"
+        for i, c in enumerate(chunks[:20])  # Cap at 20 chunks
     )
+
+    prompt = (
+        "You are a resume screener. Score each experience chunk "
+        "against the job requirements.\n\n"
+        f"REQUIREMENTS (numbered):\n{req_list}\n\n"
+        f"EXPERIENCE CHUNKS:\n{chunk_list}\n\n"
+        f"For each chunk (1 to {min(len(chunks), 20)}), reply "
+        "with one line in this exact format:\n"
+        "CHUNK_NUMBER REQUIREMENT_NUMBER SCORE\n\n"
+        "Example:\n1 3 0.8\n2 1 0.6\n3 5 0.2\n\n"
+        "Rules:\n"
+        "- REQUIREMENT_NUMBER = which requirement best matches\n"
+        "- SCORE = relevance 0.0 to 1.0\n"
+        "- One line per chunk, no extra text"
+    )
+
+    llm = get_fast_llm(temperature=0)
     response = llm.invoke(prompt)
     raw = (response.content or "").strip()
 
-    try:
-        lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-        req_idx = int(lines[0]) - 1
-        score = float(lines[1])
-        best_req = (
-            requirements[req_idx]
-            if 0 <= req_idx < len(requirements) else ""
-        )
-        return best_req, max(0.0, min(1.0, score))
-    except (ValueError, IndexError):
-        pass
+    # Parse the batch response
+    results: list[tuple[str, float]] = []
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
 
-    # Fallback: extract any float from the response
-    floats = re.findall(r"\b0\.\d+\b|\b1\.0\b", raw)
-    if floats:
-        score = float(floats[-1])
-        nums = re.findall(r"\b([1-9])\b", raw)
-        req_idx = int(nums[0]) - 1 if nums else 0
-        best_req = (
-            requirements[req_idx]
-            if 0 <= req_idx < len(requirements) else ""
-        )
-        return best_req, max(0.0, min(1.0, score))
+    for i in range(min(len(chunks), 20)):
+        try:
+            parts = lines[i].split()
+            req_idx = int(parts[1]) - 1
+            score = float(parts[2])
+            best_req = (
+                requirements[req_idx]
+                if 0 <= req_idx < len(requirements) else ""
+            )
+            results.append(
+                (best_req, max(0.0, min(1.0, score))),
+            )
+        except (ValueError, IndexError):
+            # Fallback: try to extract any numbers from the line
+            if i < len(lines):
+                floats = re.findall(
+                    r"\b0\.\d+\b|\b1\.0\b", lines[i],
+                )
+                if floats:
+                    results.append(("", float(floats[-1])))
+                    continue
+            results.append(("", 0.0))
 
-    return "", 0.0
+    # Pad if we got fewer results than chunks
+    while len(results) < len(chunks):
+        results.append(("", 0.0))
+
+    return results
 
 
 def _retrieve_and_score(
     jd_requirements: dict,
 ) -> tuple[list[MatchedExperience], list[str]]:
-    """Build queries from JD, retrieve chunks, score relevance, flag gaps.
+    """Build queries from JD, retrieve chunks, score in one batch.
 
     Args:
         jd_requirements: Parsed JD dict with required_skills and
@@ -141,31 +153,27 @@ def _retrieve_and_score(
 
     chunks = retrieve_experiences(queries, top_k=TOP_K_PER_QUERY)
 
+    # Single LLM call to score ALL chunks at once
+    scores = _score_all_chunks_batch(chunks, required_skills)
+
     matched: list[MatchedExperience] = []
-
-    # One LLM call per chunk (batch all requirements) — not per skill
-    for chunk_data in chunks:
-        content = chunk_data["content"]
-        source = chunk_data["source_doc"]
-        related = chunk_data.get("related_chunks", [])
-
-        best_req, best_score = _score_chunk_vs_requirements(
-            content, required_skills
-        )
+    for chunk_data, (best_req, best_score) in zip(
+        chunks, scores,
+    ):
         matched.append(
             MatchedExperience(
                 requirement=best_req,
-                evidence=content,
-                source_doc=source,
+                evidence=chunk_data["content"],
+                source_doc=chunk_data["source_doc"],
                 relevance_score=best_score,
-                related_chunks=related,
+                related_chunks=chunk_data.get(
+                    "related_chunks", [],
+                ),
             )
         )
 
-    # Drop chunks that scored 0 — pure noise, don't send to Node 2
     matched = [m for m in matched if m["relevance_score"] > 0]
 
-    # Flag gaps: required skills with no matched evidence above threshold
     covered = {
         m["requirement"]
         for m in matched
