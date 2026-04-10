@@ -9,9 +9,9 @@ An AI-powered job application pipeline that automates resume tailoring, applicat
 1. **Paste a job description** → the agent parses requirements, retrieves your relevant experiences from a personal knowledge base, and rewrites your resume to match.
 2. **Scores your fit** (1–5) before you spend time applying, so you can prioritize.
 3. **Quality review loop** — checks keyword coverage and faithfulness (no hallucinated skills) before saving.
-4. **Saves everything**: tailored resume (`.md`), archived JD (`.json`), STAR stories (`.json`), and a running tracker (`.csv`).
-5. **Conversational refinement** — chat with the agent to tweak bullets, tone, or emphasis.
-6. **Interview prep** — when you land an interview, the agent deep-retrieves your stories, researches the company via web search, surfaces likely questions, and generates STARL-format answers.
+4. **Saves everything**: tailored resume (`.md`), archived JD (`.json`), and a running tracker (`.csv`).
+5. **Conversational refinement** — chat with the agent to tweak bullets, tone, or emphasis. Changes update the editor and save to disk in real time.
+6. **Interview prep** — when you land an interview, the agent deep-retrieves your stories, researches the company via web search, surfaces likely questions, and generates STARL-format answers. Chat can edit the prep document directly.
 
 ---
 
@@ -26,13 +26,12 @@ User inputs: Target Role + Company Name + JD text
 ┌──────────────────────────┐
 │ Node 1: JD Analyzer      │  LLM: parse JD → JSON
 │   • RAG retrieval        │  ChromaDB semantic search
-│   • Relevance scoring    │  LLM per chunk
+│   • Relevance scoring    │  Single batched LLM call for all chunks
 │   • Fit score (1-5)      │  Rule-based formula
 └──────────┬───────────────┘
            ▼
 ┌──────────────────────────┐
-│ Node 2: Resume Tailor    │  LLM call 1: tailor resume (base resume + JD only)
-│   • STAR story generator │  LLM call 2: generate STAR stories (RAG evidence)
+│ Node 2: Resume Tailor    │  LLM: rewrite resume (base resume + JD)
 └──────────┬───────────────┘
            ▼
 ┌──────────────────────────┐
@@ -43,8 +42,8 @@ User inputs: Target Role + Company Name + JD text
       pass? ── Yes ──→ save_and_track() ──→ Done
            │                ├── Save resume .md
            No               ├── Save JD .json
-           │                ├── Save STAR stories .json
-           └→ Node 2        └── Append tracker.csv
+           │                └── Append tracker.csv
+           └→ Node 2
               (max 2 loops)
 ```
 
@@ -91,7 +90,8 @@ User selects application (status = "interview")
 | Embeddings | sentence-transformers/all-MiniLM-L6-v2 | Local, free, no API key needed |
 | Vector DB | ChromaDB (local persistent) | Zero infra, fully rebuildable from source docs |
 | Web Search | Tavily API | Company research + interview question mining |
-| Frontend | Streamlit | Rapid prototyping with session state |
+| Backend | FastAPI + Jinja2 | REST API with server-rendered templates, async task management |
+| Frontend | Tailwind CSS + HTMX | Modern, lightweight UI with partial page updates — no JS framework needed |
 | Containerization | Docker + docker-compose | One-command deployment |
 
 ---
@@ -151,10 +151,10 @@ cp your_project_writeup.md knowledge_base/projects/
 python -m src.rag.ingest
 
 # 8. Launch
-streamlit run src/main.py
+uvicorn src.api.app:app --reload
 ```
 
-Open [http://localhost:8501](http://localhost:8501)
+Open [http://localhost:8000](http://localhost:8000)
 
 ---
 
@@ -168,23 +168,24 @@ Open [http://localhost:8501](http://localhost:8501)
 docker-compose up --build
 ```
 
-Open [http://localhost:8501](http://localhost:8501)
+Open [http://localhost:8000](http://localhost:8000)
 
-Docker mounts `knowledge_base/`, `base_resume/`, `output/`, and `chroma_data/` as volumes, so your data persists outside the container. Edit files on your host machine, then click "Re-ingest" in the sidebar.
+Docker mounts `knowledge_base/`, `base_resume/`, `output/`, and `chroma_data/` as volumes, so your data persists outside the container. Edit files on your host machine, then click "Re-ingest documents" in the sidebar.
 
 ---
 
 ## Usage
 
-1. **Sidebar → Re-ingest Documents**: builds the ChromaDB vector store from your knowledge base. Run once, then again whenever you add/edit files.
+1. **Sidebar → Re-ingest documents**: builds the ChromaDB vector store from your knowledge base. Run once, then again whenever you add/edit files.
 2. **Fill in Target Role + Company Name** + paste the full JD text.
-3. **Generate Tailored Resume**: pipeline runs in ~30–60 seconds depending on your LLM provider.
+3. **Generate Tailored Resume**: pipeline runs with real-time progress tracking (Analyze JD → Tailor Resume → Quality Review → Save).
 4. **Check the fit score**: ≥3.5 = good fit, <3.5 = consider skipping.
-5. **Review Pipeline Details**: expand to see matched experiences, STAR stories, gaps, and review feedback.
-6. **Refine via Chat**: use the chat assistant at the bottom (mode: "Refine Resume") to iteratively adjust.
+5. **Review Pipeline Details**: expand to see matched experiences, gaps, keyword changes, and review feedback.
+6. **Refine via Chat**: open the Chat Assistant (bottom-right), select "Refine Resume" mode, and request changes. The resume editor updates in real time.
 7. **Download or Save** the final version.
-8. **Tracker tab**: update application status; set to `interview` and click "Prepare Interview" to generate interview prep.
-9. **Interview Prep Chat**: switch chat mode to "Interview Prep" for follow-up questions and sample answers.
+8. **Tracker tab**: update application status; changing to `interview` auto-saves and shows a Generate button.
+9. **Interview Prep**: click Generate/View in the Prep column. The prep document appears in a panel below the tracker with its own progress indicator.
+10. **Interview Prep Chat**: switch chat mode to "Interview Prep" to edit the prep document — changes save to disk automatically.
 
 ---
 
@@ -212,14 +213,33 @@ The app is provider-agnostic — switching providers requires changing only `.en
 ```
 career-prep-agent/
 ├── src/
-│   ├── main.py                      # Streamlit app (UI + global chatbot)
+│   ├── api/
+│   │   ├── app.py                   # FastAPI app, router registration
+│   │   ├── tasks.py                 # Background task manager (ThreadPool + progress)
+│   │   ├── dependencies.py          # Session store (file-backed), shared state
+│   │   └── routes/
+│   │       ├── pages.py             # HTML page routes (/, /tracker)
+│   │       ├── pipeline.py          # Pipeline run/poll/save endpoints
+│   │       ├── tracker.py           # Tracker CRUD + interview prep endpoints
+│   │       ├── chat.py              # Chat edit (resume + interview prep)
+│   │       ├── knowledge.py         # RAG ingest + ChromaDB status
+│   │       └── download.py          # File download endpoints
+│   ├── templates/
+│   │   ├── base.html                # Layout (Tailwind + HTMX + Inter font)
+│   │   ├── index.html               # Resume tailoring page
+│   │   ├── tracker.html             # Application tracker page
+│   │   └── partials/                # HTMX partial templates
+│   ├── static/
+│   │   ├── css/app.css              # Custom styles
+│   │   └── js/app.js                # Chat, tracker, interview prep JS
+│   ├── main_streamlit.py            # Legacy Streamlit frontend (preserved)
 │   ├── llm.py                       # Central LLM factory (provider-agnostic)
 │   ├── state.py                     # GraphState + InterviewPrepState TypedDicts
 │   ├── graph.py                     # LangGraph Phase 1 pipeline
 │   ├── graph_interview.py           # LangGraph Phase 2 (fan-out/fan-in)
 │   ├── agents/
-│   │   ├── jd_analyzer_matcher.py   # Node 1: JD parse + RAG + fit score
-│   │   ├── resume_tailor.py         # Node 2: tailor resume + STAR stories
+│   │   ├── jd_analyzer_matcher.py   # Node 1: JD parse + RAG + batched scoring
+│   │   ├── resume_tailor.py         # Node 2: tailor resume
 │   │   ├── quality_reviewer.py      # Node 3: keyword + faithfulness check
 │   │   ├── save_and_track.py        # File I/O, zero LLM calls
 │   │   └── interview/
@@ -246,8 +266,11 @@ career-prep-agent/
 
 ## Design Decisions
 
-**Why separate resume tailoring from STAR story generation?**
-Combining them in one LLM call caused hallucination — RAG chunks overwhelmed the base resume context. Splitting into two calls (resume = base resume + JD only, STAR = RAG evidence + JD) eliminates this.
+**Why batch chunk scoring in a single LLM call?**
+The original design scored each RAG chunk individually (N LLM calls for N chunks). Batching all chunks into one prompt reduces the pipeline from ~15 LLM calls to ~4, cutting latency by 3-4x.
+
+**Why FastAPI + HTMX instead of Streamlit?**
+Streamlit is great for prototyping but offers limited UI customization and reruns the entire script on each interaction. FastAPI + Jinja2 + HTMX provides full control over layout, styling, and partial page updates while keeping the stack simple (no JS framework). The backend also exposes a proper REST API, useful for future integrations.
 
 **Why LangGraph instead of LangChain LCEL?**
 The quality review feedback loop requires conditional routing back to Node 2 — a cycle that LCEL chains cannot express. LangGraph's `StateGraph` + `add_conditional_edges` handles this natively.
