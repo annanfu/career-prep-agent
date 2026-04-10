@@ -58,3 +58,31 @@ def download_prep(filename: str) -> FileResponse:
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+@router.get("/tex/{filename}")
+def download_tex(filename: str) -> FileResponse:
+    """Download a generated .tex resume from output/resumes/.
+
+    Args:
+        filename: TeX filename.
+
+    Returns:
+        FileResponse forcing a download.
+    """
+    path = Path("output/resumes") / filename
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"TeX file not found: {filename}",
+        )
+    return FileResponse(
+        path=str(path),
+        filename=filename,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"'
+            ),
+        },
+    )

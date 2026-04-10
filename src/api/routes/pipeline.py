@@ -1,5 +1,7 @@
-"""Pipeline execution routes — run, poll status, get result, save."""
+"""Pipeline execution routes — run, poll status, get result, save, tex."""
 
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -205,6 +207,105 @@ def save_resume(
         content=(
             '<p class="text-xs text-green-600">'
             "Saved successfully.</p>"
+        ),
+        media_type="text/html",
+    )
+
+
+_TEX_TEMPLATE_PATH = BASE_RESUME_DIR / "template.tex"
+_TEX_PROMPT_PATH = Path("src/prompts/md_to_tex.txt")
+
+
+@router.post("/generate-tex")
+def generate_tex(
+    request: Request,
+    response: Response,
+    resume_content: str = Form(""),
+    sid: str | None = Cookie(default=None),
+) -> Response:
+    """Convert current MD resume to LaTeX using the template."""
+    from src.llm import get_quality_llm
+
+    sid_val = ensure_session_cookie(sid, response)
+    session = get_session(sid_val)
+
+    md_resume = resume_content or session.get(
+        "current_resume", "",
+    )
+    if not md_resume:
+        return Response(
+            content=(
+                '<p class="text-sm text-amber-600">'
+                "No resume to convert.</p>"
+            ),
+            media_type="text/html",
+        )
+
+    # Read template and prompt
+    tex_template = _TEX_TEMPLATE_PATH.read_text(encoding="utf-8")
+    prompt_template = _TEX_PROMPT_PATH.read_text(encoding="utf-8")
+    prompt = prompt_template.replace("{resume_md}", md_resume)
+
+    # LLM call to convert MD → LaTeX sections
+    llm = get_quality_llm(temperature=0)
+    resp = llm.invoke(prompt)
+    raw = (resp.content or "").strip()
+
+    # Parse JSON response
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+
+    try:
+        sections = json.loads(raw)
+    except json.JSONDecodeError:
+        return Response(
+            content=(
+                '<p class="text-sm text-rose-600">'
+                "Failed to parse LLM output. Try again.</p>"
+            ),
+            media_type="text/html",
+        )
+
+    # Fill template
+    filled = tex_template
+    filled = filled.replace(
+        "%%EXPERIENCE%%",
+        sections.get("experience", ""),
+    )
+    filled = filled.replace(
+        "%%PROJECTS%%",
+        sections.get("projects", ""),
+    )
+    filled = filled.replace(
+        "%%EDUCATION%%",
+        sections.get("education", ""),
+    )
+    filled = filled.replace(
+        "%%SKILLS%%",
+        sections.get("skills", ""),
+    )
+
+    # Save to output
+    saved_path = session.get("saved_resume_path", "")
+    if saved_path:
+        tex_path = Path(saved_path).with_suffix(".tex")
+    else:
+        tex_path = Path("output/resumes/resume.tex")
+    tex_path.parent.mkdir(parents=True, exist_ok=True)
+    tex_path.write_text(filled, encoding="utf-8")
+
+    fn = tex_path.name
+    return Response(
+        content=(
+            '<div class="flex items-center gap-3">'
+            '<p class="text-sm text-emerald-600">'
+            "TeX generated successfully.</p>"
+            f'<a href="/api/download/tex/{fn}" hx-boost="false" '
+            f'download="{fn}" '
+            'class="text-sm bg-stone-50 hover:bg-stone-100 '
+            "text-stone-600 py-1.5 px-3 rounded-lg border "
+            'border-stone-200 transition">'
+            "Download .tex</a></div>"
         ),
         media_type="text/html",
     )

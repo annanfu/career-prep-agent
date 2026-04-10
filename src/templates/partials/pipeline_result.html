@@ -36,7 +36,7 @@
               class="text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
         Preview
       </button>
-      <a href="/api/download/resume/{{ resume_filename }}" download="{{ resume_filename }}"
+      <a href="/api/download/resume/{{ resume_filename }}" download="{{ resume_filename }}" hx-boost="false"
          class="text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
         Download
       </a>
@@ -45,9 +45,24 @@
               class="text-sm bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3 rounded-lg transition">
         Save
       </button>
+      <button hx-post="/api/pipeline/generate-tex" hx-include="#resume-editor"
+              hx-target="#tex-toast" hx-swap="innerHTML"
+              hx-indicator="#tex-spinner"
+              class="text-sm bg-stone-700 hover:bg-stone-800 text-white py-1.5 px-3 rounded-lg transition">
+        Generate .tex
+      </button>
     </div>
   </div>
   <div id="save-toast" class="mb-2"></div>
+  <div id="tex-toast" class="mb-2 flex items-center gap-2">
+    <span id="tex-spinner" class="htmx-indicator flex items-center gap-2 text-sm text-stone-400">
+      <svg class="animate-spin h-4 w-4 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      Converting to LaTeX...
+    </span>
+  </div>
   <input type="hidden" name="saved_resume_path" value="{{ saved_resume_path }}" />
   <textarea id="resume-editor" name="resume_content" rows="20"
             class="w-full font-mono">{{ resume_content }}</textarea>

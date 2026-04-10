@@ -10,7 +10,7 @@
       </div>
       <div class="flex gap-2">
         {% if row.get('prep_filename') %}
-        <a href="/api/download/prep/{{ row.prep_filename }}" download="{{ row.prep_filename }}"
+        <a href="/api/download/prep/{{ row.prep_filename }}" download="{{ row.prep_filename }}" hx-boost="false"
            class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 py-1.5 px-3 rounded-md transition">
           Download
         </a>
