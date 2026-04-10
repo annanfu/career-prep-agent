@@ -1,0 +1,16 @@
+langgraph
+langchain
+langchain-groq
+langchain-openai
+langchain-chroma
+langchain-google-genai
+langchain-community
+chromadb
+google-generativeai
+streamlit
+python-dotenv
+pypdf
+pandas
+numpy
+sentence-transformers
+tavily-python

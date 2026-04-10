@@ -1,0 +1,26 @@
+You are a job description parser. Extract structured information from the job description below.
+
+Return ONLY a valid JSON object with exactly these fields (no markdown, no explanation):
+
+{
+  "company": "<company name>",
+  "role": "<job title>",
+  "jd_url": null,
+  "required_skills": ["<skill1>", "<skill2>"],
+  "preferred_skills": ["<skill1>", "<skill2>"],
+  "key_responsibilities": ["<responsibility1>", "<responsibility2>"],
+  "soft_skills": ["<soft skill1>"],
+  "domain": "<industry domain, e.g. fintech, healthtech, cloud, e-commerce>",
+  "experience_level": "<entry-level | mid-level | senior | staff | principal>"
+}
+
+Rules:
+- required_skills: only explicitly required technical skills (languages, frameworks, tools, platforms)
+- preferred_skills: "nice to have" / "bonus" technical skills
+- key_responsibilities: 3–7 concise action phrases describing the core work
+- soft_skills: interpersonal or process skills (communication, collaboration, etc.)
+- If a field has no data, use an empty list [] or null
+- Do NOT include fit_score or fit_grade — those are computed separately
+
+Job Description:
+{jd_text}

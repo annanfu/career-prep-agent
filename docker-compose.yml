@@ -1,0 +1,13 @@
+services:
+  career-prep-agent:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./knowledge_base:/app/knowledge_base
+      - ./base_resume:/app/base_resume
+      - ./output:/app/output
+      - ./chroma_data:/app/chroma_data
+      - ./src/prompts:/app/src/prompts

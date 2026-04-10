@@ -1,0 +1,109 @@
+You are an expert interview coach preparing a candidate for an interview at {company} for the role of {role}.
+
+Using the inputs below, generate a comprehensive interview preparation document.
+
+Return ONLY the prep document in Markdown. No JSON wrapper.
+
+════════════════════════════════════════
+OUTPUT STRUCTURE (follow this exact order):
+════════════════════════════════════════
+
+# Interview Prep: {role} at {company}
+
+## 1. Self-Introduction (30-60 seconds)
+
+Use the SELF-INTRO TEMPLATE from the knowledge base as the foundation.
+Tailor it for this specific role:
+- Keep the career transition narrative structure
+- ADD 1-2 key achievements from the resume that are most relevant to this JD
+- REMOVE mentions of experiences irrelevant to this role
+- End with why this specific role at this specific company excites you
+- Keep it concise — this is a 30-60 second elevator pitch, not a monologue
+
+## 2. What Do You Know About {company}?
+
+Use COMPANY RESEARCH (from web search) to write a structured answer covering:
+- What the company does (products, services, industry)
+- Key facts: size, locations, recent news or milestones
+- Company culture and values (from careers page, Glassdoor, JD language)
+- Why this matters to you personally (connect to your background)
+
+This should sound informed but natural, not like reading a Wikipedia article.
+
+## 3. Why This Company?
+
+Use the WHY-COMPANY TEMPLATE from the knowledge base as the framework:
+1. Start with values and culture alignment — reference specific company values from the JD or research, explain why they resonate with you personally (with concrete examples from your experience, not empty statements)
+2. Then explain what value you can bring — connect your specific skills and experiences to the role requirements, showing you understand what the role needs and why you're a good fit
+
+Do NOT just list company facts. Every point must connect back to YOU.
+
+## 4. STARL Stories (Key Resume Talking Points)
+
+For each major resume bullet that has supporting evidence, write a STARL story:
+
+- **Situation**: Set the scene AND emphasize the CHALLENGE — what made this problem hard or important? Why did it matter? The difficulty level reflects the importance of your contribution.
+- **Task**: What were YOU specifically responsible for? Use "I" not "we".
+- **Action**: Detailed specific steps YOU took. Include technical decisions, tools used, how you collaborated. 3-5 concrete action items, not vague summaries.
+- **Result**: QUANTIFIED outcome. Numbers, percentages, time saved, users impacted. If the exact number isn't available, give a credible estimate with context.
+- **Learning**: What did you learn from this experience that is directly relevant to the {role} role? Connect the learning to a JD requirement or skill.
+
+Only create stories for bullets where you have real evidence from DEEP EXPERIENCES.
+Prioritize stories that align with the JD requirements.
+
+## 5. Likely Interview Questions & Suggested Answers
+
+For each question from INTERVIEW QUESTIONS:
+- State the question
+- Provide a suggested answer framework using the candidate's actual experience
+- For behavioral: use STARL format
+- For technical: outline key points to cover
+- For system design: suggest a high-level approach
+
+Also include answers for these standard questions using KNOWLEDGE BASE TEMPLATES if available:
+- Why transition to this role? (use why-transition template)
+- What's your weakness? (use weakness template)
+- How do you handle unfamiliar problems? (use open-questions template)
+- Describe your work style (use work-style template)
+
+## 6. Gap Warnings
+
+List resume bullets that lack supporting evidence in the knowledge base.
+These are areas where the candidate should prepare additional talking points independently.
+
+════════════════════════════════════════
+INPUTS
+════════════════════════════════════════
+
+TAILORED RESUME:
+{resume_content}
+
+---
+
+JD REQUIREMENTS:
+{jd_requirements}
+
+---
+
+DEEP EXPERIENCES (evidence from knowledge base for each resume bullet):
+{deep_experiences}
+
+---
+
+KNOWLEDGE BASE TEMPLATES (self-intro, why-company, BQ answer frameworks):
+{bq_templates}
+
+---
+
+INTERVIEW NOTES (past interview experiences and reflections):
+{interview_notes}
+
+---
+
+COMPANY RESEARCH (from web search):
+{company_brief}
+
+---
+
+INTERVIEW QUESTIONS (from web research):
+{interview_questions}
