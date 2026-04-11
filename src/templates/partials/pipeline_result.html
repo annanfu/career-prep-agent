@@ -45,24 +45,17 @@
               class="text-sm bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3 rounded-lg transition">
         Save
       </button>
-      <button hx-post="/api/pipeline/generate-tex" hx-include="#resume-editor"
+      <button id="tex-btn" hx-post="/api/pipeline/generate-tex" hx-include="#resume-editor"
               hx-target="#tex-toast" hx-swap="innerHTML"
-              hx-indicator="#tex-spinner"
-              class="text-sm bg-stone-700 hover:bg-stone-800 text-white py-1.5 px-3 rounded-lg transition">
+              hx-on::before-request="this.disabled=true; this.textContent='Generating...'"
+              hx-on::after-request="this.disabled=false; this.textContent='Generate .tex'"
+              class="text-sm bg-stone-700 hover:bg-stone-800 disabled:bg-stone-400 text-white py-1.5 px-3 rounded-lg transition">
         Generate .tex
       </button>
     </div>
   </div>
   <div id="save-toast" class="mb-2"></div>
-  <div id="tex-toast" class="mb-2 flex items-center gap-2">
-    <span id="tex-spinner" class="htmx-indicator flex items-center gap-2 text-sm text-stone-400">
-      <svg class="animate-spin h-4 w-4 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-      </svg>
-      Converting to LaTeX...
-    </span>
-  </div>
+  <div id="tex-toast" class="mb-2"></div>
   <input type="hidden" name="saved_resume_path" value="{{ saved_resume_path }}" />
   <textarea id="resume-editor" name="resume_content" rows="20"
             class="w-full font-mono">{{ resume_content }}</textarea>
@@ -146,20 +139,11 @@
       <p class="text-sm text-stone-500">{{ review_feedback or 'No issues found.' }}</p>
     </div>
 
+    {% if tailor_reasoning %}
     <div>
-      <h4 class="text-sm font-medium text-stone-600 mb-2">STAR Stories</h4>
-      {% for story in star_stories %}
-      <details class="border border-stone-200 rounded-lg mb-2">
-        <summary class="px-3 py-2 text-sm cursor-pointer hover:bg-stone-50 font-medium">{{ story.get('experience_name', 'Story') }}</summary>
-        <div class="px-3 pb-3 text-sm text-stone-500 space-y-1">
-          <p><strong>Requirement:</strong> {{ story.get('jd_requirement', '') }}</p>
-          <p><strong>S:</strong> {{ story.get('situation', '') }}</p>
-          <p><strong>T:</strong> {{ story.get('task', '') }}</p>
-          <p><strong>A:</strong> {{ story.get('action', '') }}</p>
-          <p><strong>R:</strong> {{ story.get('result', '') }}</p>
-        </div>
-      </details>
-      {% endfor %}
+      <h4 class="text-sm font-medium text-stone-600 mb-2">Tailoring Reasoning</h4>
+      <pre class="bg-stone-50 rounded-lg p-3 text-sm whitespace-pre-wrap border border-stone-100">{{ tailor_reasoning }}</pre>
     </div>
+    {% endif %}
   </div>
 </details>

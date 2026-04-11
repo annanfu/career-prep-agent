@@ -24,8 +24,8 @@ _GEMINI_FAST = "gemini-2.5-flash"
 _GEMINI_QUALITY = "gemini-2.5-flash"
 
 # OpenAI model names
-_OPENAI_FAST = "gpt-4o-mini"   # cheap, fast — used for JD parsing & review
-_OPENAI_QUALITY = "gpt-4o-mini"  # used for resume tailoring
+_OPENAI_FAST = "gpt-4o-mini"       # cheap, fast — JD parsing & review
+_OPENAI_QUALITY = "gpt-4.1-mini"   # resume tailoring — better instruction following
 
 
 def _with_retry(llm: BaseChatModel) -> BaseChatModel:

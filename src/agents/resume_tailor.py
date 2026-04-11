@@ -15,12 +15,163 @@ TAILOR_PROMPT_PATH = Path("src/prompts/resume_tailor.txt")
 STAR_PROMPT_PATH = Path("src/prompts/star_story.txt")
 
 
+def _fix_combined_titles(base_resume: str, target_role: str) -> str:
+    """Replace combined job titles with a single title closest to target.
+
+    Finds lines like '*X / Y / Z (Context)*' and picks the title
+    that best matches target_role, keeping the parenthetical.
+
+    Args:
+        base_resume: Full resume markdown text.
+        target_role: Target job title from user input.
+
+    Returns:
+        Resume with combined titles replaced.
+    """
+    lines = base_resume.split("\n")
+    result: list[str] = []
+    target_lower = target_role.lower()
+
+    for line in lines:
+        # Match italic job title lines with slashes: *Title1 / Title2 (Context)*
+        if line.startswith("*") and "/" in line and line.endswith("*"):
+            inner = line.strip("*").strip()
+            # Extract parenthetical if present
+            paren = ""
+            if "(" in inner and inner.endswith(")"):
+                paren_start = inner.rfind("(")
+                paren = inner[paren_start:]
+                inner = inner[:paren_start].strip()
+
+            # Split titles by /
+            titles = [t.strip() for t in inner.split("/")]
+
+            # Pick best match: find title with most word overlap to target
+            best = titles[0]
+            best_score = 0
+            target_words = set(target_lower.split())
+            for title in titles:
+                title_words = set(title.lower().split())
+                score = len(target_words & title_words)
+                if score > best_score:
+                    best_score = score
+                    best = title
+            # If no word overlap, pick first title
+            result.append(
+                f"*{best} {paren}*" if paren else f"*{best}*",
+            )
+        else:
+            result.append(line)
+
+    return "\n".join(result)
+
+
+def _filter_projects(base_resume: str, jd_requirements: dict) -> str:
+    """Pre-filter projects by keyword overlap before sending to LLM.
+
+    Keeps a project if ANY JD keyword appears in its header or bullets.
+    This ensures the LLM cannot accidentally drop relevant projects.
+
+    Args:
+        base_resume: Full base resume markdown text.
+        jd_requirements: Parsed JD dict.
+
+    Returns:
+        Resume with only matching projects kept.
+    """
+    # Collect all JD keywords (lowercase)
+    _STOP_WORDS = {
+        "a", "an", "the", "and", "or", "but", "for", "of",
+        "to", "in", "on", "at", "by", "with", "from", "into",
+        "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did", "will",
+        "can", "may", "that", "this", "these", "those",
+        "not", "all", "any", "each", "both", "such", "new",
+        "our", "you", "your", "they", "them", "their", "its",
+        "who", "what", "which", "how", "when", "where", "as",
+        "well", "also", "more", "very", "real", "best",
+    }
+    # Short tech terms that should never be filtered by length
+    _SHORT_TECH = {
+        "ai", "ml", "go", "c", "r", "sql", "aws", "gcp",
+        "api", "ci", "cd", "ci/cd", "ux", "ui", "qa",
+        "llm", "rag", "nlp", "etl", "sdk", "jvm",
+    }
+    jd_keywords: set[str] = set()
+    for field in (
+        "required_skills", "preferred_skills",
+    ):
+        for item in jd_requirements.get(field, []):
+            # Keep full multi-word skills as-is
+            jd_keywords.add(item.lower())
+            # Split and add individual words
+            for word in item.lower().split():
+                if word in _SHORT_TECH:
+                    jd_keywords.add(word)
+                elif len(word) >= 4 and word not in _STOP_WORDS:
+                    jd_keywords.add(word)
+
+    # Also add common variations
+    extras = set()
+    for kw in jd_keywords:
+        extras.add(kw.replace("-", " "))
+        extras.add(kw.replace(" ", "-"))
+    jd_keywords.update(extras)
+
+    lines = base_resume.split("\n")
+    result_lines: list[str] = []
+    in_projects = False
+    current_project: list[str] = []
+    current_header = ""
+
+    for line in lines:
+        if line.strip().startswith("## Projects"):
+            in_projects = True
+            result_lines.append(line)
+            continue
+
+        if in_projects and line.strip().startswith("## "):
+            # End of projects section — flush last project
+            if current_project:
+                block = "\n".join(current_project).lower()
+                if any(kw in block for kw in jd_keywords):
+                    result_lines.extend(current_project)
+            in_projects = False
+            result_lines.append(line)
+            continue
+
+        if in_projects:
+            if line.strip().startswith("**") and "|" in line:
+                # New project header — flush previous
+                if current_project:
+                    block = "\n".join(current_project).lower()
+                    if any(kw in block for kw in jd_keywords):
+                        result_lines.extend(current_project)
+                current_project = [line]
+            elif line.strip() == "---" and current_project:
+                current_project.append(line)
+            elif current_project:
+                current_project.append(line)
+            else:
+                result_lines.append(line)
+        else:
+            result_lines.append(line)
+
+    # Flush last project if still in projects section
+    if current_project:
+        block = "\n".join(current_project).lower()
+        if any(kw in block for kw in jd_keywords):
+            result_lines.extend(current_project)
+
+    return "\n".join(result_lines)
+
+
 def _tailor_resume(
     base_resume: str,
     jd_requirements: dict,
     review_feedback: str,
     target_role: str,
-) -> str:
+) -> tuple[str, str]:
     """Call LLM to tailor the resume. No RAG chunks — base resume only.
 
     Args:
@@ -30,9 +181,13 @@ def _tailor_resume(
         target_role: Target job title (e.g. "Software Engineer").
 
     Returns:
-        Tailored resume as a Markdown string.
+        Tuple of (tailored_resume, reasoning).
     """
-    # Derive industry context from role + JD domain for persona prompt
+    # Pre-process: fix combined job titles in base resume
+    base_resume = _fix_combined_titles(base_resume, target_role)
+    # Pre-filter projects by JD keyword overlap
+    base_resume = _filter_projects(base_resume, jd_requirements)
+
     domain = jd_requirements.get("domain", "")
     target_role_industry = (
         f"{domain} — {target_role}" if domain else target_role
@@ -48,15 +203,26 @@ def _tailor_resume(
         .replace("{target_role_industry}", target_role_industry)
     )
 
-    llm = get_quality_llm(temperature=0.2)
+    llm = get_quality_llm(temperature=0)
     response = llm.invoke(prompt)
     raw = (response.content or "").strip()
+
+    # Parse reasoning and resume
+    separator = "---RESUME_START---"
+    reasoning = ""
+    if separator in raw:
+        parts = raw.split(separator, 1)
+        reasoning = parts[0].strip()
+        raw = parts[1].strip()
 
     # Strip markdown code fences if model wraps output
     raw = re.sub(r"^```(?:markdown)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
 
-    return raw
+    # Post-process: fix combined titles if LLM re-introduced them
+    raw = _fix_combined_titles(raw, target_role)
+
+    return raw, reasoning
 
 
 def _generate_star_stories(
@@ -132,19 +298,20 @@ def resume_tailor_node(state: GraphState) -> dict:
         state.get("jd_requirements") or {}
     ).get("role", "the target role")
 
-    tailored = _tailor_resume(
+    tailored, reasoning = _tailor_resume(
         state["base_resume_content"],
         state["jd_requirements"],
         review_feedback,
         target_role,
     )
+    if reasoning:
+        print(f"  Reasoning:\n{reasoning}")
     print(f"  Draft length: {len(tailored)} chars")
 
-    # STAR stories skipped for speed — can be generated on-demand
-    # via interview prep pipeline instead
     return {
         "draft_content": tailored,
         "star_stories": [],
+        "tailor_reasoning": reasoning,
     }
 
 

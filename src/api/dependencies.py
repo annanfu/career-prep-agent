@@ -143,11 +143,13 @@ def _restore_from_disk() -> dict[str, Any]:
     jd_path = data.get("saved_jd_path", "")
     if jd_path and Path(jd_path).exists():
         try:
-            jd_data = json.loads(
+            jd_archive = json.loads(
                 Path(jd_path).read_text(encoding="utf-8"),
             )
             session["pipeline_result"] = {
-                "jd_requirements": jd_data,
+                "jd_requirements": jd_archive.get(
+                    "parsed", jd_archive,
+                ),
             }
             session["saved_jd_path"] = jd_path
         except (json.JSONDecodeError, OSError):

@@ -132,6 +132,7 @@ if __name__ == "__main__":
         "gaps": [],
         "draft_content": "",
         "star_stories": [],
+        "tailor_reasoning": "",
         "review_result": None,
         "revision_count": 0,
         "change_summary": {},

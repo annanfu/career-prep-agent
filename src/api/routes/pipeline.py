@@ -59,6 +59,7 @@ def _run_pipeline(
         "gaps": [],
         "draft_content": "",
         "star_stories": [],
+        "tailor_reasoning": "",
         "review_result": None,
         "revision_count": 0,
         "change_summary": {},
@@ -184,6 +185,9 @@ def pipeline_status(
             "gaps": result.get("gaps", []),
             "review_feedback": review.get("feedback", ""),
             "star_stories": result.get("star_stories", []),
+            "tailor_reasoning": result.get(
+                "tailor_reasoning", "",
+            ),
         },
     )
 
@@ -244,7 +248,53 @@ def generate_tex(
     # Read template and prompt
     tex_template = _TEX_TEMPLATE_PATH.read_text(encoding="utf-8")
     prompt_template = _TEX_PROMPT_PATH.read_text(encoding="utf-8")
-    prompt = prompt_template.replace("{resume_md}", md_resume)
+
+    # Get JD keywords so LLM knows what to bold
+    result_data = session.get("pipeline_result") or {}
+    jd_req = result_data.get("jd_requirements") or {}
+    jd_skills = list(set(
+        jd_req.get("required_skills", [])
+        + jd_req.get("preferred_skills", [])
+    ))
+    # Also extract tech terms from raw JD to catch what parser missed
+    jd_raw = result_data.get("jd_raw", "")
+    if not jd_raw:
+        # Try reading from saved JD file
+        jd_path = session.get("saved_jd_path", "")
+        if jd_path and Path(jd_path).exists():
+            try:
+                jd_archive = json.loads(
+                    Path(jd_path).read_text(encoding="utf-8"),
+                )
+                jd_raw = jd_archive.get("jd_raw", "")
+            except (json.JSONDecodeError, OSError):
+                pass
+    # Common tech terms to scan for in JD text
+    _TECH_TERMS = [
+        "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL",
+        "Redis", "Kafka", "RabbitMQ", "Elasticsearch",
+        "LangChain", "LangGraph", "LlamaIndex", "ChromaDB",
+        "Hugging Face", "PyTorch", "scikit-learn", "TensorFlow",
+        "React", "Node.js", "Express", "FastAPI", "Django",
+        "Flask", "Spring Boot", "Kubernetes", "EKS", "Docker",
+        "Terraform", "Ansible", "Jenkins", "Harness",
+        "CI/CD", "Linux", "Unix", "Git", "GitHub",
+        "AWS", "Azure", "GCP", "Google Cloud",
+        "Agile", "TDD", "REST API", "microservices",
+        "vector database", "knowledge graph",
+    ]
+    jd_lower = jd_raw.lower()
+    for term in _TECH_TERMS:
+        if term.lower() in jd_lower and term not in jd_skills:
+            jd_skills.append(term)
+    jd_keywords_str = ", ".join(sorted(set(jd_skills)))
+    print(f"[generate-tex] JD keywords for bolding: {jd_keywords_str[:200]}")
+
+    prompt = (
+        prompt_template
+        .replace("{resume_md}", md_resume)
+        .replace("{jd_keywords}", jd_keywords_str)
+    )
 
     # LLM call to convert MD → LaTeX sections
     llm = get_quality_llm(temperature=0)

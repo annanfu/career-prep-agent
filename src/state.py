@@ -82,6 +82,7 @@ class GraphState(TypedDict):
     # --- Node 2 output ---
     draft_content: str
     star_stories: List[dict]
+    tailor_reasoning: str
 
     # --- Node 3 output ---
     review_result: Optional[ReviewResult]

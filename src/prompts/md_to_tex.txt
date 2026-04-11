@@ -13,6 +13,7 @@ For EXPERIENCE — each job uses:
 \resumeItemListEnd
 
 For PROJECTS — each project uses:
+\vspace{-12pt}
 \resumeProjectHeading
   {\textbf{Project Name}}{Tech stack}
 \resumeItemListStart
@@ -24,13 +25,21 @@ For EDUCATION — each school uses:
   {University Name}{Date Range}
   {Degree; GPA: X.X/4.0}{Location}
 
-For SKILLS — each category is one \item:
+For SKILLS — each category is one \item. Use the EXACT same categories as the Markdown resume:
 \item \textbf{Category}{: item1, item2, item3}
 \vspace{-4pt}
 
 IMPORTANT RULES:
 - Escape these LaTeX special characters: & → \& , % → \% , $ → \$ , # → \# , _ → \_ , ~ → \textasciitilde
-- Bold important keywords with \textbf{}
+- BOLDING rules — ONLY inside \resumeItem{} bullet text:
+  1. Bold EVERY occurrence of these JD keywords: {jd_keywords}
+     Example: JD lists "NoSQL" → \textbf{NoSQL} in every bullet where it appears
+  2. Bold quantitative impact numbers: \textbf{98\%}, \textbf{50\%}, \textbf{40K+}, \textbf{3x}, etc.
+  3. Do NOT bold generic verbs, adjectives, or non-technical phrases
+  NEVER bold in these locations:
+  • Project heading tech stack (the right-aligned part of \resumeProjectHeading) — keep plain
+  • Technical Skills section — keep all skill names plain, only bold the category label
+  • Job title, company name, dates, locations
 - Keep bullet points concise (1-2 lines each)
 - Preserve ALL content from the Markdown — do not drop any jobs, projects, or skills
 - Output ONLY valid JSON, no markdown fences, no explanation

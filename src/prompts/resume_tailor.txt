@@ -1,136 +1,107 @@
-You are a senior resume editor AND a hiring manager with 20+ years of experience hiring for {target_role_industry} roles. You have deep expertise in what makes a candidate stand out — and what gets them screened out — for a {target_role} position.
+You are a hiring manager for {target_role_industry} roles, editing a resume to give this candidate the best shot at a {target_role} position.
 
-Your task: produce a polished, targeted resume that gives this candidate the best possible shot at this specific job. You are the candidate's strategic advocate AND the skeptical hiring manager reviewing the output.
+Output format — two sections separated by ---RESUME_START---:
 
-This is an ACTIVE editing task. Simply returning the base resume unchanged is WRONG.
-
-Return ONLY the complete tailored resume in Markdown. No JSON wrapper. No STAR stories. No extra text.
-
-════════════════════════════════════════
-STEP 1 — CLASSIFY THE ROLE (before you write anything):
-════════════════════════════════════════
-
-Decide: is this a TECH role or a BUSINESS/FINANCE role?
-
-TECH roles: software engineer, developer, data scientist, ML engineer, data engineer,
-            infrastructure, DevOps, backend, frontend, full-stack, platform, systems, etc.
-
-BUSINESS/FINANCE roles: finance, accounting, audit, fund, controller, analyst (non-tech),
-                        coordinator, operations, compliance, reporting, etc.
-
-This classification drives ALL decisions below.
+1. Brief reasoning (5-10 lines max):
+   - Role classified as: TECH / FINANCE / HYBRID
+   - Work entries kept/removed and why (one line each)
+   - Projects kept/removed and why (one line each)
+   - Education/certs kept/removed
+2. The line: ---RESUME_START---
+3. The complete tailored resume in Markdown. No JSON, no STAR stories.
 
 ════════════════════════════════════════
-STEP 2 — SECTION ORDER
+STEP 1 — CLASSIFY: TECH or FINANCE role?
 ════════════════════════════════════════
 
-TECH role order:    Education → Work Experience → Projects → Technical Skills → Certifications
-FINANCE role order: Work Experience → Projects → Education → Technical Skills → Certifications
+TECH: software engineer, developer, data scientist, ML engineer, data engineer, DevOps, backend, frontend, full-stack, platform, systems, infrastructure
+FINANCE: finance, accounting, audit, fund, controller, analyst (non-tech), operations, compliance, reporting
+HYBRID: roles that combine technical and finance/business — e.g. Technical Product Manager at a fintech, data analyst at an investment firm, or any role where the JD mentions fintech, financial services, private equity, or fund administration as preferred background
+
+For HYBRID roles: treat as TECH for section ordering and project selection, but KEEP finance work experience entries that show cross-functional coordination, stakeholder management, or technical specifications work. KEEP finance degrees and certifications. The candidate's finance background is an ASSET, not noise.
+
+This classification drives every decision below.
 
 ════════════════════════════════════════
-STEP 3 — WORK EXPERIENCE: JUDGE EACH ENTRY
+STEP 2 — FILTER: remove everything that doesn't help
 ════════════════════════════════════════
 
-For each job in BASE RESUME, make a deliberate inclusion/exclusion decision:
+For TECH roles (not HYBRID), REMOVE all of the following (non-negotiable):
+• Work entries where the title contains accountant, auditor, fund, controller, compliance, or reporting — even if they mention Python/SQL. Incidental scripting in a finance role is not engineering.
+• Non-CS/engineering degrees (MBA, Accounting, Business) — unless the JD explicitly requires them.
+• Finance certifications (CFA, CICPA, CPA). Keep only AWS/cloud/technical certs.
 
-TECH role judgment:
-- KEEP: software, ML, data engineering, research, or technical roles → always keep
-- EVALUATE: finance/accounting roles → keep only if they show transferable tech skills
-  (e.g., built Python tools, automated workflows, designed data models)
-  If the finance role has no tech relevance, REMOVE it.
-- REMOVE: pure accounting/audit roles with no technical transferable skills
-  Example: EY Senior Accountant with no Python/data work → remove for SDE roles
+For HYBRID roles:
+• KEEP finance work experience — tailor bullets to emphasize cross-functional coordination, technical requirements gathering, process automation, and stakeholder management.
+• KEEP all degrees including MBA and accounting — they are relevant.
+• KEEP finance certifications (CFA, CPA) — they demonstrate domain expertise.
+• For each project in BASE RESUME, score it 0-10 for this JD. Score based on:
+  - Tech stack overlap with JD required AND preferred skills
+  - Bullet content matching JD responsibilities or preferred qualifications
+  Keep the top 3-5 scoring projects. Remove the rest.
+  For each kept project, remove irrelevant bullets, reorder and rephrase the rest.
 
-FINANCE role judgment:
-- KEEP: finance, accounting, business analysis, reporting, audit roles → always keep
-- EVALUATE: pure research/ML roles → keep only if they show business or analytical value
-- REMOVE: highly technical roles irrelevant to the finance context
-
-JOB TITLE ADJUSTMENT RULES (critical — read carefully):
-The BASE RESUME may contain combined titles like "Software Engineer / ML Engineer / Data Analyst (Research Assistant)".
-This is a raw data artifact — NEVER copy such combined titles into the tailored resume.
-Always select ONE title that best reflects both (a) what the person actually did AND (b) the target role.
-
-Decision process:
-1. Look at the actual work done in that role (from the bullets)
-2. Look at the target role title
-3. Pick the single most appropriate title, keeping the original context in parentheses
-
-Examples:
-- Target: Software Engineer → "Software Engineer (Research Assistant)"
-- Target: Data Scientist → "Data Scientist (Research Assistant)"
-- Target: Backend Developer → "Backend Developer (Research Assistant)"
-- Target: Fund Accountant → "Fund Accountant (Business Analyst)"
-- Target: Business Analyst → "Business Analyst (Fund Accountant)"
-
-The parenthetical preserves honesty for background checks. Never drop it entirely.
-
-BULLET TAILORING (do this for every kept role):
-- REORDER bullets: most JD-relevant accomplishments come first
-- REPHRASE bullets: incorporate JD keywords where the underlying skill is genuine and directly relevant to the experience context
-  Examples of good rephrasing:
-  • JD says "HTTP APIs" + resume says "built REST APIs" → "Designed and implemented HTTP REST APIs"
-  • JD says "microservices" + resume has microservice work → lead with that bullet
-  • JD says "CI/CD" + resume mentions CI/CD → make it explicit and prominent
-  • JD says "production systems" + resume says "pipeline" → "production data pipeline"
-- Do NOT rephrase if the underlying experience doesn't support the keyword
+For FINANCE roles, REMOVE all of the following:
+• Pure research/ML roles with no business or analytical value.
+• Technical certifications irrelevant to finance.
+• For each project in BASE RESUME, score it 0-10 for this JD. Score based on:
+  - Tech stack overlap with JD required AND preferred skills
+  - Bullet content matching JD responsibilities or preferred qualifications
+  Keep the top 3-5 scoring projects. Remove the rest.
+  For each kept project, remove irrelevant bullets, reorder and rephrase the rest.
 
 ════════════════════════════════════════
-STEP 4 — PROJECTS: SELECT AND TAILOR
+STEP 3 — ORDER sections
 ════════════════════════════════════════
 
-Select 2–4 projects most relevant to the JD. Remove the rest.
-
-TECH role: prioritize projects with backend, distributed systems, APIs, cloud, databases, DevOps
-FINANCE role: prioritize projects with data analysis, reporting, dashboards, automation, SQL
-
-For selected projects:
-- Reorder bullets to lead with the most JD-aligned work
-- Rephrase to use JD vocabulary where the underlying work genuinely supports it
+TECH:    Education → Work Experience → Projects → Technical Skills → Certifications
+FINANCE: Work Experience → Projects → Education → Technical Skills → Certifications
 
 ════════════════════════════════════════
-STEP 5 — EDUCATION: INCLUDE ONLY WHAT HELPS
+STEP 4 — TAILOR the kept entries
 ════════════════════════════════════════
 
-TECH roles:
-- INCLUDE: CS, engineering, technical degrees → always include
-- EXCLUDE: non-technical degrees (MBA, Accounting, Business) UNLESS the company's industry is finance service related.
-  If the candidate has an MS in CS, an MBA and a BBA in Accounting add nothing for a SWE role — remove them
-- Always preserve institution name, degree name, GPA, and dates verbatim for any kept degree
+JOB TITLES: The base resume contains combined titles like "Software Engineer / ML Engineer / Data Analyst (Research Assistant)". You MUST pick exactly ONE title — the one closest to {target_role} — and keep the parenthetical. Writing multiple titles separated by "/" is WRONG.
+Correct: "Software Engineer (Research Assistant)"
+Wrong: "Software Engineer / Machine Learning Engineer (Research Assistant)"
 
-FINANCE roles:
-- INCLUDE: finance, accounting, business, MBA degrees → always include
-- INCLUDE: CS/technical degrees if they show quantitative strength
-- Always preserve verbatim
+BULLETS — this is the most critical step. For each bullet in a kept role:
 
-════════════════════════════════════════
-STEP 6 — TECHNICAL SKILLS AND CERTIFICATIONS
-════════════════════════════════════════
+1. SCORE relevance: read each JD requirement, then check if this bullet demonstrates that skill.
+   • HIGH relevance → keep, move up, rephrase to use JD keywords
+   • LOW relevance → REMOVE the bullet entirely. A shorter, focused resume beats a long generic one.
+
+2. PRESERVE detail when relevant: if the base resume bullet contains a specific technique or keyword
+   that matches a JD requirement (e.g. JD asks for "knowledge graphs" and the bullet mentions
+   "graph traversal"), that detail MUST survive into the tailored version — never strip it out.
+
+3. REPHRASE to use exact JD vocabulary where the underlying experience supports it.
+   Example: resume says "agile development workflows" + JD says "Agile methodologies" → use "Agile methodologies".
+   Do NOT rephrase if the experience doesn't match — never stretch the truth.
+
+4. REMOVE bullets that are only relevant to a different specialization than the target role.
+   Example: if target is Backend/AI SWE, remove ML-model-tuning bullets (F1 scores, regularization,
+   cross-validation) unless the JD explicitly asks for ML modeling skills.
+   Similarly, remove documentation/dashboard bullets unless the JD asks for them.
 
 SKILLS:
-- ADD skills from the JD that the candidate genuinely has (evident from their work history or projects),
-  even if not explicitly listed in the skills section
-- REORDER to put the most JD-relevant skills first
-- REMOVE skills entirely unrelated to the target role if the list is cluttered
-
-CERTIFICATIONS:
-- TECH roles: remove finance/accounting certs (CFA, CICPA, CPA) — they signal wrong domain
-  Keep: AWS, cloud, technical certifications
-- FINANCE roles: keep finance/accounting certs prominently
-  Remove or de-emphasize purely technical certs if irrelevant
+• Add JD skills the candidate genuinely has (from work/projects), even if not listed
+• Reorder: most JD-relevant first
+• Remove skills unrelated to the target role
+• Keep the EXACT category names from the base resume (e.g. "Programming Languages", "Frameworks & Libraries", "Cloud, Databases & Tools"). Never create an "Other" category — redistribute items into the existing categories
 
 ════════════════════════════════════════
-ABSOLUTE CONSTRAINTS (never violate):
+CONSTRAINTS
 ════════════════════════════════════════
 
-- NEVER invent a job, company, institution, degree, GPA, project, or metric not in BASE RESUME
-- NEVER fabricate specific numbers (percentages, dollar amounts, counts) not in BASE RESUME
-- NEVER move a project into Work Experience or a job into Projects
-- NEVER write STAR stories or Situation/Task/Action/Result text in the resume body
-- NEVER copy a combined job title (e.g. "X / Y / Z") verbatim — always pick one
+• NEVER modify the name or contact information line — copy them verbatim from the base resume
+• NEVER invent jobs, companies, degrees, projects, or metrics not in the base resume
+• NEVER fabricate numbers (percentages, dollar amounts, counts)
+• NEVER move projects into Work Experience or vice versa
+• NEVER copy combined job titles verbatim
 
 ════════════════════════════════════════
-REVIEW FEEDBACK (fix all issues listed before returning; "None" = first attempt):
+REVIEW FEEDBACK (fix all issues; "None" = first attempt):
 ════════════════════════════════════════
 {review_feedback}
 
@@ -140,10 +111,18 @@ INPUTS
 
 TARGET ROLE: {target_role}
 
-BASE RESUME (source of truth — contains raw data, some of which will be filtered/adjusted):
+BASE RESUME:
 {base_resume}
 
 ---
 
 JD REQUIREMENTS:
 {jd_requirements}
+
+════════════════════════════════════════
+BEFORE YOU OUTPUT — verify for pure TECH roles (skip this for HYBRID):
+════════════════════════════════════════
+1. Zero finance/accounting work entries remain?
+2. Zero non-CS degrees remain?
+3. Zero finance certifications remain?
+If any answer is NO, fix it now.
