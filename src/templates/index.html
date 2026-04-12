@@ -77,7 +77,13 @@
     </div>
   </form>
 
-  <div id="pipeline-output"></div>
+  <div id="pipeline-output">
+    {% if pipeline_ctx %}
+      {% with fit_score=pipeline_ctx.fit_score, fit_grade=pipeline_ctx.fit_grade, keyword_coverage=pipeline_ctx.keyword_coverage, revision_count=pipeline_ctx.revision_count, resume_content=pipeline_ctx.resume_content, resume_filename=pipeline_ctx.resume_filename, saved_resume_path=pipeline_ctx.saved_resume_path, change_summary=pipeline_ctx.change_summary, jd_requirements=pipeline_ctx.jd_requirements, matched_experiences=pipeline_ctx.matched_experiences, gaps=pipeline_ctx.gaps, review_feedback=pipeline_ctx.review_feedback, star_stories=pipeline_ctx.star_stories, tailor_reasoning=pipeline_ctx.tailor_reasoning %}
+        {% include "partials/pipeline_result.html" %}
+      {% endwith %}
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
 

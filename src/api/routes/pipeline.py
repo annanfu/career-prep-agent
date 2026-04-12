@@ -135,6 +135,8 @@ def pipeline_status(
         )
 
     # Completed — save to session and render result
+    from src.api.routes.pages import _build_pipeline_context
+
     result = task.result or {}
     sid_val = ensure_session_cookie(sid, response)
     session = get_session(sid_val)
@@ -144,52 +146,19 @@ def pipeline_status(
         "saved_resume_path", "",
     )
     session["saved_jd_path"] = result.get("saved_jd_path", "")
-    session["base_resume_path"] = result.get("base_resume_path", "")
+    session["base_resume_path"] = result.get(
+        "base_resume_path", "",
+    )
     session["chat_history"] = []
 
     # Persist to disk so session survives server restarts
     persist_session(session)
 
-    jd_req = result.get("jd_requirements") or {}
-    review = result.get("review_result") or {}
-    change_summary = result.get("change_summary") or {}
-
-    matched = [
-        e for e in result.get("matched_experiences", [])
-        if e.get("relevance_score", 0) > 0
-    ]
-    matched.sort(
-        key=lambda e: e["relevance_score"], reverse=True,
-    )
-
-    saved_path = result.get("saved_resume_path", "")
-    resume_fn = Path(saved_path).name if saved_path else "resume.md"
-
     task_manager.cleanup(task_id)
 
+    ctx = _build_pipeline_context(session) or {}
     return templates.TemplateResponse(
-        request,
-        "partials/pipeline_result.html",
-        {
-            "fit_score": jd_req.get("fit_score", 0),
-            "fit_grade": jd_req.get("fit_grade", "?"),
-            "keyword_coverage": review.get(
-                "keyword_coverage", 0,
-            ),
-            "revision_count": result.get("revision_count", 0),
-            "resume_content": result.get("final_output", ""),
-            "resume_filename": resume_fn,
-            "saved_resume_path": saved_path,
-            "change_summary": change_summary,
-            "jd_requirements": jd_req,
-            "matched_experiences": matched,
-            "gaps": result.get("gaps", []),
-            "review_feedback": review.get("feedback", ""),
-            "star_stories": result.get("star_stories", []),
-            "tailor_reasoning": result.get(
-                "tailor_reasoning", "",
-            ),
-        },
+        request, "partials/pipeline_result.html", ctx,
     )
 
 
@@ -212,6 +181,106 @@ def save_resume(
         content=(
             '<p class="text-xs text-green-600">'
             "Saved successfully.</p>"
+        ),
+        media_type="text/html",
+    )
+
+
+@router.post("/mark-applied")
+def mark_applied(
+    response: Response,
+    sid: str | None = Cookie(default=None),
+) -> Response:
+    """Add the current pipeline result to the tracker as 'applied'."""
+    from datetime import date as dt_date
+
+    from src.agents.save_and_track import (
+        TRACKER_CSV,
+        TRACKER_COLUMNS,
+        _append_tracker,
+    )
+
+    sid_val = ensure_session_cookie(sid, response)
+    session = get_session(sid_val)
+    result = session.get("pipeline_result") or {}
+    jd_req = result.get("jd_requirements") or {}
+
+    if not jd_req:
+        return Response(
+            content=(
+                '<p class="text-xs text-amber-600">'
+                "No pipeline result to track.</p>"
+            ),
+            media_type="text/html",
+        )
+
+    # Check for duplicate (same company + role already in tracker)
+    if TRACKER_CSV.exists():
+        import pandas as pd_check
+        df = pd_check.read_csv(TRACKER_CSV)
+        company = (
+            result.get("company_name")
+            or jd_req.get("company", "")
+        )
+        role = (
+            result.get("target_role")
+            or jd_req.get("role", "")
+        )
+        dupes = df[
+            (df["company"].str.lower() == company.lower())
+            & (df["role"].str.lower() == role.lower())
+        ]
+        if not dupes.empty:
+            return Response(
+                content=(
+                    '<p class="text-xs text-amber-600">'
+                    "Already tracked.</p>"
+                ),
+                media_type="text/html",
+            )
+    else:
+        company = (
+            result.get("company_name")
+            or jd_req.get("company", "")
+        )
+        role = (
+            result.get("target_role")
+            or jd_req.get("role", "")
+        )
+
+    saved_resume = session.get("saved_resume_path", "")
+    saved_jd = session.get("saved_jd_path", "")
+
+    tracker_row = {
+        "company": company,
+        "role": role,
+        "fit_score": jd_req.get("fit_score", ""),
+        "status": "applied",
+        "notes": "",
+        "resume_filename": (
+            Path(saved_resume).name if saved_resume else ""
+        ),
+        "date": dt_date.today().isoformat(),
+        "fit_grade": jd_req.get("fit_grade", ""),
+        "jd_filename": (
+            Path(saved_jd).name if saved_jd else ""
+        ),
+        "stories_filename": "",
+        "jd_url": (
+            jd_req.get("jd_url")
+            or result.get("jd_url")
+            or ""
+        ),
+    }
+    _append_tracker(tracker_row)
+
+    return Response(
+        content=(
+            '<div class="flex items-center gap-2">'
+            '<span class="text-xs text-emerald-600">'
+            "Added to tracker.</span>"
+            '<span class="text-xs text-stone-400">'
+            f"{company} — {role}</span></div>"
         ),
         media_type="text/html",
     )

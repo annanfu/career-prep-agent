@@ -31,7 +31,7 @@
 <div class="bg-white border border-stone-200 rounded-xl p-5 mb-5">
   <div class="flex items-center justify-between mb-3">
     <h3 class="text-sm font-medium text-stone-700">Tailored Resume</h3>
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2">
       <button onclick="togglePreview()"
               class="text-sm bg-stone-50 hover:bg-stone-100 text-stone-600 py-1.5 px-3 rounded-lg border border-stone-200 transition">
         Preview
@@ -52,6 +52,13 @@
               class="text-sm bg-stone-700 hover:bg-stone-800 disabled:bg-stone-400 text-white py-1.5 px-3 rounded-lg transition">
         Generate .tex
       </button>
+      <button hx-post="/api/pipeline/mark-applied"
+              hx-target="#applied-toast" hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) this.disabled=true"
+              class="text-sm bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:text-stone-500 text-white py-1.5 px-3 rounded-lg transition">
+        Mark as Applied
+      </button>
+      <span id="applied-toast"></span>
     </div>
   </div>
   <div id="save-toast" class="mb-2"></div>
@@ -68,6 +75,36 @@
     Pipeline Details
   </summary>
   <div class="px-5 pb-5 space-y-5">
+
+    {% if jd_requirements %}
+    <div>
+      <h4 class="text-sm font-medium text-stone-600 mb-2">JD Keywords</h4>
+      {% if jd_requirements.get('required_skills') %}
+      <p class="text-sm text-stone-500 mb-1">
+        <span class="font-medium">Required:</span>
+        {% for s in jd_requirements.required_skills %}
+        <code class="bg-stone-100 text-stone-700 px-1 rounded text-xs">{{ s }}</code>
+        {% endfor %}
+      </p>
+      {% endif %}
+      {% if jd_requirements.get('preferred_skills') %}
+      <p class="text-sm text-stone-500 mb-1">
+        <span class="font-medium">Preferred:</span>
+        {% for s in jd_requirements.preferred_skills %}
+        <code class="bg-stone-100 text-stone-600 px-1 rounded text-xs">{{ s }}</code>
+        {% endfor %}
+      </p>
+      {% endif %}
+      {% if jd_requirements.get('soft_skills') %}
+      <p class="text-sm text-stone-500">
+        <span class="font-medium">Soft Skills:</span>
+        {% for s in jd_requirements.soft_skills %}
+        <code class="bg-stone-100 text-stone-500 px-1 rounded text-xs">{{ s }}</code>
+        {% endfor %}
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
 
     {% if change_summary %}
     <div>

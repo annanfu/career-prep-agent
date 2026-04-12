@@ -214,10 +214,28 @@ def _tailor_resume(
         parts = raw.split(separator, 1)
         reasoning = parts[0].strip()
         raw = parts[1].strip()
+    else:
+        # Fallback: split at the first Markdown heading that looks like
+        # the resume start (e.g. "# Annan Fu" or "# Name")
+        heading_match = re.search(r"^(# .+)$", raw, re.MULTILINE)
+        if heading_match and heading_match.start() > 0:
+            reasoning = raw[: heading_match.start()].strip()
+            raw = raw[heading_match.start():]
 
     # Strip markdown code fences if model wraps output
     raw = re.sub(r"^```(?:markdown)?\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
+
+    # Strip trailing notes/reasoning that leak into the resume.
+    # Matches patterns like "**Notes:**", "Notes:", "---\nNotes",
+    # "**Reasoning:**", etc. at the end of the output.
+    raw = re.sub(
+        r"\n+[-*\s]*\*{0,2}(?:Notes?|Reasoning|Key Changes)"
+        r"(?:\s*:|\*{0,2}\s*:).*",
+        "",
+        raw,
+        flags=re.DOTALL | re.IGNORECASE,
+    ).rstrip()
 
     # Post-process: fix combined titles if LLM re-introduced them
     raw = _fix_combined_titles(raw, target_role)

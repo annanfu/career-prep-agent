@@ -49,12 +49,21 @@ def tracker_data(request: Request) -> Response:
         fn = f"{safe_co}_{safe_ro}_prep.md"
         row["has_prep"] = (prep_dir / fn).exists()
 
+    # Compute summary stats
+    total = len(rows)
+    status_counts = {}
+    for r in rows:
+        s = r.get("status", "")
+        status_counts[s] = status_counts.get(s, 0) + 1
+
     return templates.TemplateResponse(
         request,
         "partials/tracker_table.html",
         {
             "rows": rows,
             "status_options": TRACKER_STATUS_OPTIONS,
+            "total": total,
+            "status_counts": status_counts,
         },
     )
 

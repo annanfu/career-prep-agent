@@ -79,7 +79,20 @@ BULLETS — this is the most critical step. For each bullet in a kept role:
    Example: resume says "agile development workflows" + JD says "Agile methodologies" → use "Agile methodologies".
    Do NOT rephrase if the experience doesn't match — never stretch the truth.
 
-4. REMOVE bullets that are only relevant to a different specialization than the target role.
+4. KEYWORD INJECTION RULES — strictly enforced:
+   • SOFT SKILL keywords (e.g. collaboration, cross-functional, Agile, stakeholder management,
+     communication, ownership) MAY be woven into bullet rephrasing if the experience genuinely
+     demonstrates that behavior.
+   • TECH SKILL keywords (e.g. Kubernetes, Go, Kafka, Terraform, specific frameworks, tools,
+     languages, or platforms) MUST NOT be inserted into Work Experience or Project bullets
+     unless that technology already appears in the base resume bullet being edited.
+     Reason: adding a tech keyword to a bullet implies hands-on use; fabricating this is
+     dishonest and will be caught in technical interviews.
+   • If a JD tech skill is genuinely possessed (visible elsewhere in the resume or skills section)
+     but missing from a bullet, the correct action is to ADD it to the Technical Skills section
+     only — never retrofit it into an experience or project bullet.
+
+5. REMOVE bullets that are only relevant to a different specialization than the target role.
    Example: if target is Backend/AI SWE, remove ML-model-tuning bullets (F1 scores, regularization,
    cross-validation) unless the JD explicitly asks for ML modeling skills.
    Similarly, remove documentation/dashboard bullets unless the JD asks for them.
@@ -89,6 +102,15 @@ SKILLS:
 • Reorder: most JD-relevant first
 • Remove skills unrelated to the target role
 • Keep the EXACT category names from the base resume (e.g. "Programming Languages", "Frameworks & Libraries", "Cloud, Databases & Tools"). Never create an "Other" category — redistribute items into the existing categories
+• ML/DS SKILL PRUNING (strictly enforced):
+  - PyTorch, scikit-learn → KEEP only if the role is Machine Learning Engineer or Data Scientist,
+    OR the JD explicitly requires ML frameworks / model training / deep learning.
+    Otherwise REMOVE from Technical Skills.
+  - Pandas, NumPy, Matplotlib, Plotly, Jupyter → KEEP only if:
+    (a) the role is ML Engineer / Data Scientist / Data Analyst, OR
+    (b) the JD explicitly mentions data visualization, dashboards, or data analysis.
+    Otherwise REMOVE from Technical Skills.
+  - When in doubt, REMOVE — a shorter, focused skills section is better than a cluttered one.
 
 ════════════════════════════════════════
 CONSTRAINTS

@@ -197,22 +197,8 @@ def save_and_track_node(state: GraphState) -> dict:
     )
     print(f"  STAR stories  : {stories_path}")
 
-    # 4. Append to tracker.csv
-    tracker_row = {
-        "company": state.get("company_name") or jd_req.get("company", ""),
-        "role": state.get("target_role") or jd_req.get("role", ""),
-        "fit_score": jd_req.get("fit_score", ""),
-        "status": "applied",
-        "notes": "",
-        "resume_filename": resume_path.name,
-        "date": date.today().isoformat(),
-        "fit_grade": jd_req.get("fit_grade", ""),
-        "jd_filename": jd_path.name,
-        "stories_filename": stories_path.name,
-        "jd_url": jd_req.get("jd_url") or state.get("jd_url") or "",
-    }
-    _append_tracker(tracker_row)
-    print(f"  Tracker       : {TRACKER_CSV} (row appended)")
+    # 4. Tracker append is deferred — user clicks "Mark as Applied"
+    #    in the UI to add the row (see pipeline routes).
 
     # 5. Compute change summary (rule-based, no LLM)
     keyword_coverage = (
@@ -234,7 +220,7 @@ def save_and_track_node(state: GraphState) -> dict:
         "saved_resume_path": str(resume_path),
         "saved_jd_path": str(jd_path),
         "saved_stories_path": str(stories_path),
-        "tracker_updated": True,
+        "tracker_updated": False,
         "change_summary": change_summary,
     }
 

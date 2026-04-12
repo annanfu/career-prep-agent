@@ -1,4 +1,19 @@
 {% if rows %}
+<!-- Summary stats -->
+<div class="flex gap-4 mb-4 text-sm">
+  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-stone-100 text-stone-600 font-medium">
+    Total: {{ total }}
+  </span>
+  {% for status, count in status_counts.items() %}
+  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium
+    {% if status == 'interview' %}bg-teal-50 text-teal-700
+    {% elif status == 'offer' %}bg-emerald-50 text-emerald-700
+    {% elif status == 'rejected' %}bg-rose-50 text-rose-700
+    {% else %}bg-stone-50 text-stone-600{% endif %}">
+    {{ status|capitalize }}: {{ count }}
+  </span>
+  {% endfor %}
+</div>
 <div class="overflow-x-auto">
   <table id="tracker-table" class="w-full text-sm">
     <thead>

@@ -12,7 +12,14 @@ For EXPERIENCE — each job uses:
   \resumeItem{Bullet point text here with \textbf{keywords} bolded.}
 \resumeItemListEnd
 
-For PROJECTS — each project uses:
+For PROJECTS — the FIRST project has NO \vspace before it:
+\resumeProjectHeading
+  {\textbf{Project Name}}{Tech stack}
+\resumeItemListStart
+  \resumeItem{Description with \textbf{keywords} bolded.}
+\resumeItemListEnd
+
+Every SUBSEQUENT project starts with \vspace{-12pt}:
 \vspace{-12pt}
 \resumeProjectHeading
   {\textbf{Project Name}}{Tech stack}
@@ -25,8 +32,11 @@ For EDUCATION — each school uses:
   {University Name}{Date Range}
   {Degree; GPA: X.X/4.0}{Location}
 
-For SKILLS — each category is one \item. Use the EXACT same categories as the Markdown resume:
+For SKILLS — each category is one \item. Use the EXACT same categories as the Markdown resume.
+If the resume has a separate "Certifications" section, merge it as the LAST \item under skills with category name "Certifications":
 \item \textbf{Category}{: item1, item2, item3}
+\vspace{-4pt}
+\item \textbf{Certifications}{: cert1; cert2; cert3}
 \vspace{-4pt}
 
 IMPORTANT RULES:
