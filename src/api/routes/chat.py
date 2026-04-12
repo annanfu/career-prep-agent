@@ -21,6 +21,8 @@ def _chat_refine(
     current_resume: str,
     jd_requirements: dict,
     history: list[dict],
+    master_resume: str = "",
+    rag_chunks: list[dict] | None = None,
 ) -> str:
     """Refine the resume via LLM. Returns complete updated resume.
 
@@ -29,15 +31,45 @@ def _chat_refine(
         current_resume: Current resume Markdown.
         jd_requirements: Parsed JD requirements dict.
         history: List of {role, content} dicts.
+        master_resume: Full master resume for restoring deleted content.
+        rag_chunks: Retrieved knowledge base chunks for deep research mode.
 
     Returns:
         Updated resume Markdown string.
     """
+    master_section = ""
+    if master_resume:
+        master_section = (
+            "\n\nMASTER RESUME (original, unfiltered — use this as the "
+            "source of truth to restore any experiences, projects, or "
+            "bullets the user asks to add back; never fabricate anything "
+            "not present here):\n"
+            f"{master_resume}"
+        )
+
+    rag_section = ""
+    if rag_chunks:
+        chunk_texts = "\n\n---\n\n".join(
+            f"[Source: {c.get('source_doc', 'unknown')}]\n"
+            f"{c.get('content', '')}"
+            for c in rag_chunks
+        )
+        rag_section = (
+            "\n\nKNOWLEDGE BASE EXCERPTS (retrieved based on your "
+            "request — use specific facts, metrics, and details from "
+            "these to enrich resume bullets; never copy verbatim, "
+            "always integrate naturally):\n\n"
+            f"{chunk_texts}"
+        )
+
     system = (
         "You are a resume editor. The user will give you instructions to "
         "modify the resume below. Apply the requested changes and return "
         "ONLY the complete updated resume in Markdown. Never fabricate "
-        "experiences, skills, or metrics not already in the resume.\n\n"
+        "experiences, skills, or metrics not present in the resume, "
+        "master resume, or knowledge base excerpts."
+        f"{master_section}"
+        f"{rag_section}\n\n"
         f"JOB REQUIREMENTS:\n{json.dumps(jd_requirements, indent=2)}\n\n"
         f"CURRENT RESUME:\n{current_resume}"
     )
@@ -89,6 +121,7 @@ def _chat_edit_prep(
     prep_doc: str,
     jd_data: dict,
     history: list[dict],
+    rag_chunks: list[dict] | None = None,
 ) -> str:
     """Edit the interview prep document based on user instruction.
 
@@ -97,17 +130,33 @@ def _chat_edit_prep(
         prep_doc: Current interview prep document.
         jd_data: JD requirements dict.
         history: Prior chat turns.
+        rag_chunks: Retrieved knowledge base chunks for deep research mode.
 
     Returns:
         Complete updated prep document.
     """
+    rag_section = ""
+    if rag_chunks:
+        chunk_texts = "\n\n---\n\n".join(
+            f"[Source: {c.get('source_doc', 'unknown')}]\n"
+            f"{c.get('content', '')}"
+            for c in rag_chunks
+        )
+        rag_section = (
+            "\n\nKNOWLEDGE BASE EXCERPTS (use specific facts, metrics, "
+            "and details from these to deepen STARL answers; never copy "
+            "verbatim, always integrate naturally):\n\n"
+            f"{chunk_texts}\n\n"
+        )
+
     system = (
         "You are an interview prep editor. The user will give you "
         "instructions to modify the interview prep document below. "
         "Apply the requested changes and return ONLY the complete "
         "updated document. Keep the same format and structure. "
         "Use STARL format for behavioral answers. Be specific "
-        "and practical. Never fabricate experiences.\n\n"
+        "and practical. Never fabricate experiences."
+        f"{rag_section}\n\n"
         f"JD REQUIREMENTS:\n{json.dumps(jd_data, indent=2)[:2000]}\n\n"
         f"CURRENT INTERVIEW PREP DOCUMENT:\n{prep_doc}"
     )
@@ -128,6 +177,7 @@ def send_chat(
     response: Response,
     message: str = Form(...),
     mode: str = Form("resume"),
+    deep_search: str = Form("false"),
     sid: str | None = Cookie(default=None),
 ) -> Response:
     """Process a chat message and return the response as HTML."""
@@ -148,8 +198,26 @@ def send_chat(
                 )
             else:
                 jd_req = result_data.get("jd_requirements", {})
+                # Load master resume for reference (restore deleted content)
+                master_resume = ""
+                base_path = session.get("base_resume_path", "")
+                if base_path and Path(base_path).exists():
+                    master_resume = Path(
+                        base_path,
+                    ).read_text(encoding="utf-8")
+                # Deep Research: retrieve relevant knowledge base chunks
+                rag_chunks: list[dict] = []
+                if deep_search == "true":
+                    try:
+                        from src.rag.retriever import retrieve_experiences
+                        rag_chunks = retrieve_experiences(
+                            [message], top_k=3,
+                        )
+                    except Exception:
+                        pass  # Silently skip if ChromaDB unavailable
                 updated = _chat_refine(
-                    message, current_resume, jd_req, history,
+                    message, current_resume, jd_req,
+                    history, master_resume, rag_chunks,
                 )
                 if updated and updated != current_resume:
                     session["current_resume"] = updated
@@ -184,11 +252,22 @@ def send_chat(
                 )
             else:
                 old_prep = prep["prep_doc"]
+                # Deep Research: retrieve relevant knowledge base chunks
+                rag_chunks_prep: list[dict] = []
+                if deep_search == "true":
+                    try:
+                        from src.rag.retriever import retrieve_experiences
+                        rag_chunks_prep = retrieve_experiences(
+                            [message], top_k=3,
+                        )
+                    except Exception:
+                        pass  # Silently skip if ChromaDB unavailable
                 updated_prep = _chat_edit_prep(
                     message,
                     old_prep,
                     prep.get("jd_data", {}),
                     history,
+                    rag_chunks_prep,
                 )
                 if updated_prep and updated_prep != old_prep:
                     prep["prep_doc"] = updated_prep

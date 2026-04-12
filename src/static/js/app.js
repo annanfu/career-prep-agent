@@ -61,6 +61,9 @@ function sendChat(event) {
   const formData = new FormData();
   formData.append('message', msg);
   formData.append('mode', currentChatMode);
+  const deepToggle = document.getElementById('deep-search-toggle');
+  const deepSearch = deepToggle && deepToggle.checked;
+  formData.append('deep_search', deepSearch ? 'true' : 'false');
 
   fetch('/api/chat/send', {
     method: 'POST',

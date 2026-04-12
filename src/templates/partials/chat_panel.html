@@ -18,7 +18,16 @@
     </p>
   </div>
 
-  <form id="chat-form" onsubmit="sendChat(event)" hx-boost="false" class="p-3 border-t border-stone-100">
+  <form id="chat-form" onsubmit="sendChat(event)" hx-boost="false" class="p-3 border-t border-stone-100 space-y-2">
+    <!-- Deep Research toggle — only shown in resume mode -->
+    <div id="deep-search-row" class="flex items-center gap-2">
+      <label class="flex items-center gap-2 text-xs text-stone-500 cursor-pointer select-none">
+        <input type="checkbox" id="deep-search-toggle"
+               class="rounded border-stone-300 text-teal-600 focus:ring-teal-400 w-3.5 h-3.5" />
+        <span>Deep Research</span>
+      </label>
+      <span class="text-xs text-stone-400">(search knowledge base)</span>
+    </div>
     <div class="flex gap-2">
       <input type="text" id="chat-input" placeholder="Ask me anything..." class="flex-1 py-2" />
       <button type="submit"

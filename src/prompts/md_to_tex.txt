@@ -38,7 +38,7 @@ IMPORTANT RULES:
   3. Do NOT bold generic verbs, adjectives, or non-technical phrases
   NEVER bold in these locations:
   • Project heading tech stack (the right-aligned part of \resumeProjectHeading) — keep plain
-  • Technical Skills section — keep all skill names plain, only bold the category label
+  • Technical Skills section — keep all skill names plain
   • Job title, company name, dates, locations
 - Keep bullet points concise (1-2 lines each)
 - Preserve ALL content from the Markdown — do not drop any jobs, projects, or skills

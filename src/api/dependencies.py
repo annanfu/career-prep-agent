@@ -101,6 +101,7 @@ def persist_session(session: dict[str, Any]) -> None:
             "saved_resume_path", "",
         ),
         "saved_jd_path": session.get("saved_jd_path", ""),
+        "base_resume_path": session.get("base_resume_path", ""),
         "chat_history": session.get("chat_history", []),
         "interview_prep_saved_path": prep.get(
             "saved_path", "",
@@ -154,6 +155,11 @@ def _restore_from_disk() -> dict[str, Any]:
             session["saved_jd_path"] = jd_path
         except (json.JSONDecodeError, OSError):
             pass
+
+    # Restore base resume path (always readable from disk — source file)
+    base_resume_path = data.get("base_resume_path", "")
+    if base_resume_path:
+        session["base_resume_path"] = base_resume_path
 
     # Restore chat history
     session["chat_history"] = data.get("chat_history", [])

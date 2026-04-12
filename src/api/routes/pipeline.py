@@ -144,6 +144,7 @@ def pipeline_status(
         "saved_resume_path", "",
     )
     session["saved_jd_path"] = result.get("saved_jd_path", "")
+    session["base_resume_path"] = result.get("base_resume_path", "")
     session["chat_history"] = []
 
     # Persist to disk so session survives server restarts
