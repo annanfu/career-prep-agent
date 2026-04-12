@@ -10,8 +10,9 @@ An AI-powered job application pipeline that automates resume tailoring, applicat
 2. **Scores your fit** (1–5) before you spend time applying, so you can prioritize.
 3. **Quality review loop** — checks keyword coverage and faithfulness (no hallucinated skills) before saving.
 4. **Saves everything**: tailored resume (`.md`), archived JD (`.json`), and a running tracker (`.csv`).
-5. **Conversational refinement** — chat with the agent to tweak bullets, tone, or emphasis. Changes update the editor and save to disk in real time.
-6. **Interview prep** — when you land an interview, the agent deep-retrieves your stories, researches the company via web search, surfaces likely questions, and generates STARL-format answers. Chat can edit the prep document directly.
+5. **Conversational refinement** — chat with the agent to tweak bullets, tone, or emphasis. Changes update the editor and save to disk in real time. Toggle **Deep Research** to pull specific facts from your knowledge base via RAG, or restore deleted experiences from the master resume.
+6. **Interview prep** — when you land an interview, the agent deep-retrieves your stories, researches the company via web search, surfaces likely questions, and generates STARL-format answers. Chat can edit the prep document directly (Deep Research available here too).
+7. **LaTeX export** — generate a `.tex` file from the tailored resume with JD keywords auto-bolded, ready for PDF compilation.
 
 ---
 
@@ -41,9 +42,9 @@ User inputs: Target Role + Company Name + JD text
            │
       pass? ── Yes ──→ save_and_track() ──→ Done
            │                ├── Save resume .md
-           No               ├── Save JD .json
-           │                └── Append tracker.csv
-           └→ Node 2
+           No               └── Save JD .json
+           │                (tracker entry deferred until user
+           └→ Node 2         clicks "Mark as Applied")
               (max 2 loops)
 ```
 
@@ -180,12 +181,13 @@ Docker mounts `knowledge_base/`, `base_resume/`, `output/`, and `chroma_data/` a
 2. **Fill in Target Role + Company Name** + paste the full JD text.
 3. **Generate Tailored Resume**: pipeline runs with real-time progress tracking (Analyze JD → Tailor Resume → Quality Review → Save).
 4. **Check the fit score**: ≥3.5 = good fit, <3.5 = consider skipping.
-5. **Review Pipeline Details**: expand to see matched experiences, gaps, keyword changes, and review feedback.
-6. **Refine via Chat**: open the Chat Assistant (bottom-right), select "Refine Resume" mode, and request changes. The resume editor updates in real time.
-7. **Download or Save** the final version.
-8. **Tracker tab**: update application status; changing to `interview` auto-saves and shows a Generate button.
-9. **Interview Prep**: click Generate/View in the Prep column. The prep document appears in a panel below the tracker with its own progress indicator.
-10. **Interview Prep Chat**: switch chat mode to "Interview Prep" to edit the prep document — changes save to disk automatically.
+5. **Review Pipeline Details**: expand to see JD keywords, matched experiences, gaps, keyword changes, tailoring reasoning, and review feedback.
+6. **Refine via Chat**: open the Chat Assistant (bottom-right), select "Refine Resume" mode, and request changes. The resume editor updates in real time. Check **Deep Research** to retrieve evidence from your knowledge base via RAG, or ask the chatbot to restore experiences deleted during tailoring (it has access to the master resume).
+7. **Download, Save, or Generate .tex** — the LaTeX export auto-bolds JD keywords and quantitative metrics.
+8. **Mark as Applied**: click the button to add the application to the tracker. The pipeline no longer auto-tracks — you decide which applications to record.
+9. **Tracker tab**: view summary stats (total, by status), update application status; changing to `interview` auto-saves and shows a Generate button.
+10. **Interview Prep**: click Generate/View in the Prep column. The prep document appears in a panel below the tracker with its own progress indicator.
+11. **Interview Prep Chat**: switch chat mode to "Interview Prep" to edit the prep document — changes save to disk automatically. Deep Research is available here too.
 
 ---
 
@@ -201,7 +203,7 @@ Model names are configured in `src/llm.py`:
 
 ```python
 _OPENAI_FAST = "gpt-4o-mini"       # JD parsing, review
-_OPENAI_QUALITY = "gpt-4o"         # Resume tailoring
+_OPENAI_QUALITY = "gpt-4.1-mini"   # Resume tailoring, chatbot
 ```
 
 The app is provider-agnostic — switching providers requires changing only `.env` and optionally the model constants in `src/llm.py`. No pipeline code changes needed.
@@ -261,28 +263,3 @@ career-prep-agent/
 ├── requirements.txt
 └── .env.example
 ```
-
----
-
-## Design Decisions
-
-**Why batch chunk scoring in a single LLM call?**
-The original design scored each RAG chunk individually (N LLM calls for N chunks). Batching all chunks into one prompt reduces the pipeline from ~15 LLM calls to ~4, cutting latency by 3-4x.
-
-**Why FastAPI + HTMX instead of Streamlit?**
-Streamlit is great for prototyping but offers limited UI customization and reruns the entire script on each interaction. FastAPI + Jinja2 + HTMX provides full control over layout, styling, and partial page updates while keeping the stack simple (no JS framework). The backend also exposes a proper REST API, useful for future integrations.
-
-**Why LangGraph instead of LangChain LCEL?**
-The quality review feedback loop requires conditional routing back to Node 2 — a cycle that LCEL chains cannot express. LangGraph's `StateGraph` + `add_conditional_edges` handles this natively.
-
-**Why hybrid rule-based + LLM in the reviewer?**
-Keyword coverage is deterministic and cheap (string matching). Faithfulness requires understanding — that's where LLM adds value. Using LLM only where needed keeps costs low.
-
-**Why fan-out/fan-in for interview prep?**
-The three sub-agents (deep RAG, company research, question mining) are independent. Running them in parallel cuts latency by ~3x vs sequential.
-
-**Why custom chunk separators for RAG?**
-Default `RecursiveCharacterTextSplitter` splits at 1000 chars, cutting STAR stories in half. Custom separators (`\nStory`, `\nSituation`, `\n## `) with 2000-char chunks keep stories intact.
-
-**Why ChromaDB (local)?**
-Zero infrastructure, no cost, fully rebuildable. If corrupted: `python -m src.rag.ingest`.
