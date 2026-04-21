@@ -57,6 +57,7 @@ def _run_pipeline(
         "jd_requirements": None,
         "matched_experiences": [],
         "gaps": [],
+        "persona_summary": "",
         "draft_content": "",
         "star_stories": [],
         "tailor_reasoning": "",
@@ -288,6 +289,7 @@ def mark_applied(
 
 _TEX_TEMPLATE_PATH = BASE_RESUME_DIR / "template.tex"
 _TEX_PROMPT_PATH = Path("src/prompts/md_to_tex.txt")
+_COVER_LETTER_PROMPT_PATH = Path("src/prompts/cover_letter.txt")
 
 
 @router.post("/generate-tex")
@@ -426,6 +428,106 @@ def generate_tex(
             "text-stone-600 py-1.5 px-3 rounded-lg border "
             'border-stone-200 transition">'
             "Download .tex</a></div>"
+        ),
+        media_type="text/html",
+    )
+
+
+@router.post("/generate-cover-letter")
+def generate_cover_letter(
+    response: Response,
+    resume_content: str = Form(""),
+    sid: str | None = Cookie(default=None),
+) -> Response:
+    """Generate a 3-paragraph cover letter from resume + JD."""
+    from src.llm import get_quality_llm
+
+    sid_val = ensure_session_cookie(sid, response)
+    session = get_session(sid_val)
+
+    md_resume = resume_content or session.get(
+        "current_resume", "",
+    )
+    if not md_resume:
+        return Response(
+            content=(
+                '<p class="text-sm text-amber-600">'
+                "Generate a tailored resume first.</p>"
+            ),
+            media_type="text/html",
+        )
+
+    result_data = session.get("pipeline_result") or {}
+    jd_req = result_data.get("jd_requirements") or {}
+    company = (
+        result_data.get("company_name")
+        or jd_req.get("company", "")
+    )
+    role = (
+        result_data.get("target_role")
+        or jd_req.get("role", "")
+    )
+
+    prompt_template = _COVER_LETTER_PROMPT_PATH.read_text(
+        encoding="utf-8",
+    )
+    prompt = (
+        prompt_template
+        .replace("{target_role}", role)
+        .replace("{company_name}", company)
+        .replace(
+            "{jd_requirements}",
+            json.dumps(jd_req, indent=2),
+        )
+        .replace("{resume_content}", md_resume)
+    )
+
+    llm = get_quality_llm(temperature=0.4)
+    resp = llm.invoke(prompt)
+    letter = (resp.content or "").strip()
+
+    # Strip markdown fences if present
+    letter = re.sub(r"^```(?:\w+)?\s*", "", letter)
+    letter = re.sub(r"\s*```$", "", letter)
+
+    # Save to disk
+    saved_path = session.get("saved_resume_path", "")
+    if saved_path:
+        cl_path = (
+            Path(saved_path)
+            .with_name(
+                Path(saved_path).stem + "_cover_letter.txt",
+            )
+        )
+    else:
+        cl_path = Path("output/resumes/cover_letter.txt")
+    cl_path.parent.mkdir(parents=True, exist_ok=True)
+    cl_path.write_text(letter, encoding="utf-8")
+    fn = cl_path.name
+
+    # Return editable textarea + download link
+    escaped = (
+        letter.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+    return Response(
+        content=(
+            '<div class="bg-white border border-stone-200 '
+            'rounded-xl p-5 mb-5">'
+            '<div class="flex items-center justify-between '
+            'mb-3">'
+            '<h3 class="text-sm font-medium text-stone-700">'
+            "Cover Letter</h3>"
+            '<a href="/api/download/cover-letter/'
+            f'{fn}" hx-boost="false" download="{fn}" '
+            'class="text-sm bg-stone-50 hover:bg-stone-100 '
+            "text-stone-600 py-1.5 px-3 rounded-lg border "
+            'border-stone-200 transition">'
+            "Download</a></div>"
+            '<textarea rows="12" '
+            'class="w-full font-mono text-sm">'
+            f"{escaped}</textarea></div>"
         ),
         media_type="text/html",
     )

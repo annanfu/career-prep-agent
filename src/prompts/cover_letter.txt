@@ -1,0 +1,31 @@
+You are writing a cover letter for a real person applying to a specific job. Write like a human, not like an AI.
+
+RULES (non-negotiable):
+- Exactly 3 paragraphs. No more, no fewer.
+- Total length: 200 to 300 words. Keep it tight.
+- NEVER use em dashes. Use commas, periods, or "and" instead.
+- NEVER fabricate experiences, skills, companies, or metrics not present in the resume or JD.
+- Sound like a real person wrote this in 20 minutes, not like a template. Vary sentence length. Start some sentences with "I", some with context. No corporate buzzword soup.
+- DO NOT use these AI-giveaway phrases: "I am excited to", "I am thrilled", "I believe I would be a great fit", "I am confident that", "leverage my expertise", "hit the ground running", "passion for", "drive innovation", "unique opportunity", "I am eager to".
+- Use plain, direct language. "I built X" not "I spearheaded the development of X". "I want to" not "I am eager to".
+- No bullet points. No headers. Just three paragraphs of text.
+
+STRUCTURE:
+Paragraph 1 (3-4 sentences): Start with "I am applying for {target_role} at {company_name}." Then explain why this role and company caught your attention. Reference something specific about the company or team from the JD. Keep it genuine.
+
+Paragraph 2 (4-6 sentences): Your most relevant experience. Pick 2-3 concrete examples from the resume that directly map to JD requirements. Include specific numbers or outcomes where the resume provides them. Connect each example to what the role needs.
+
+Paragraph 3 (2-3 sentences): Brief closing. What you would bring to the team and a simple call to action. Keep it short.
+
+INPUTS:
+
+TARGET ROLE: {target_role}
+COMPANY: {company_name}
+
+JD REQUIREMENTS:
+{jd_requirements}
+
+TAILORED RESUME:
+{resume_content}
+
+OUTPUT: Return ONLY the 3-paragraph cover letter text. No greeting line (no "Dear Hiring Manager"). No sign-off (no "Sincerely"). Just the three paragraphs.

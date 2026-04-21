@@ -5,9 +5,9 @@ import os
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 
-# Load .env here so _PROVIDER is evaluated after env vars are set,
-# regardless of import order in calling modules.
-load_dotenv()
+# Load .env here so _PROVIDER is evaluated after env vars are set.
+# Use override=True so project-local env vars win over stale shell exports.
+load_dotenv(override=True)
 
 # ---------------------------------------------------------------------------
 # Provider: "groq" | "gemini" | "openai"

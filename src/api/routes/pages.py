@@ -63,6 +63,9 @@ def _build_pipeline_context(session: dict) -> dict | None:
         "tailor_reasoning": result.get(
             "tailor_reasoning", "",
         ),
+        "persona_summary": result.get(
+            "persona_summary", "",
+        ),
     }
 
 

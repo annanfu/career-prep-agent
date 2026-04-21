@@ -106,6 +106,7 @@ def _run_pipeline(
         "jd_requirements": None,
         "matched_experiences": [],
         "gaps": [],
+        "persona_summary": "",
         "draft_content": "",
         "star_stories": [],
         "review_result": None,

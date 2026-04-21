@@ -80,6 +80,7 @@ class GraphState(TypedDict):
     gaps: List[str]
 
     # --- Node 2 output ---
+    persona_summary: str          # 1-2 sentence persona tailored to JD
     draft_content: str
     star_stories: List[dict]
     tailor_reasoning: str

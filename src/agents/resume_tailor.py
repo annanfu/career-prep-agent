@@ -1,4 +1,4 @@
-"""Node 2: Resume Tailor — two-step: tailor resume, then generate STAR stories."""
+"""Node 2: Resume Tailor — three-step: persona, tailor resume, generate STAR stories."""
 
 import json
 import re
@@ -6,13 +6,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.llm import get_quality_llm
+from src.llm import get_fast_llm, get_quality_llm
 from src.state import GraphState
 
 load_dotenv()
 
 TAILOR_PROMPT_PATH = Path("src/prompts/resume_tailor.txt")
 STAR_PROMPT_PATH = Path("src/prompts/star_story.txt")
+PERSONA_PROMPT_PATH = Path("src/prompts/persona.txt")
+PERSONA_KB_PATH = Path("knowledge_base/persona/persona.md")
 
 
 def _fix_combined_titles(base_resume: str, target_role: str) -> str:
@@ -166,6 +168,82 @@ def _filter_projects(base_resume: str, jd_requirements: dict) -> str:
     return "\n".join(result_lines)
 
 
+def _generate_persona(
+    jd_requirements: dict,
+    target_role: str,
+) -> str:
+    """Generate a 1-2 sentence persona summary tailored to the JD.
+
+    Reads the base persona from knowledge_base/persona/persona.md and
+    uses an LLM to craft a professional summary aligned with the target role.
+
+    Args:
+        jd_requirements: Parsed JD dict.
+        target_role: Target job title.
+
+    Returns:
+        Persona summary string (1-2 sentences), or empty string on failure.
+    """
+    if not PERSONA_KB_PATH.exists():
+        print("  [Persona] persona.md not found — skipping.")
+        return ""
+
+    base_persona = PERSONA_KB_PATH.read_text(encoding="utf-8")
+    prompt_template = PERSONA_PROMPT_PATH.read_text(encoding="utf-8")
+    prompt = (
+        prompt_template
+        .replace("{base_persona}", base_persona)
+        .replace("{jd_requirements}", json.dumps(jd_requirements, indent=2))
+        .replace("{target_role}", target_role)
+    )
+
+    llm = get_fast_llm(temperature=0.3)
+    response = llm.invoke(prompt)
+    summary = (response.content or "").strip()
+    # Strip quotes if the model wraps the output
+    summary = summary.strip('"').strip("'")
+    return summary
+
+
+def _inject_persona_into_resume(resume: str, persona_summary: str) -> str:
+    """Insert a persona summary line at the top of the tailored resume.
+
+    Places the summary right after the name/contact header (first two lines),
+    before the first section heading.
+
+    Args:
+        resume: Tailored resume markdown text.
+        persona_summary: 1-2 sentence professional summary.
+
+    Returns:
+        Resume with persona summary injected.
+    """
+    if not persona_summary:
+        return resume
+
+    lines = resume.split("\n")
+    insert_idx = 0
+
+    # Find the first section heading (## ...) after the name/contact block
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("## ") and i > 0:
+            insert_idx = i
+            break
+
+    if insert_idx == 0:
+        # Fallback: insert after the first non-empty line
+        for i, line in enumerate(lines):
+            if line.strip() and i > 0:
+                insert_idx = i + 1
+                break
+
+    # Insert persona summary as italic text with a blank line before and after
+    persona_block = [f"*{persona_summary}*", ""]
+    lines = lines[:insert_idx] + persona_block + lines[insert_idx:]
+    return "\n".join(lines)
+
+
 def _tailor_resume(
     base_resume: str,
     jd_requirements: dict,
@@ -284,11 +362,12 @@ def _generate_star_stories(
 
 
 def resume_tailor_node(state: GraphState) -> dict:
-    """LangGraph Node 2: tailor the resume and generate STAR stories.
+    """LangGraph Node 2: persona generation, resume tailoring, STAR stories.
 
-    Two separate LLM calls:
-    1. Tailor resume — base_resume + JD only (no RAG chunks, avoids hallucination)
-    2. Generate STAR stories — matched_experiences + JD (RAG evidence used here)
+    Three LLM calls:
+    1. Generate persona summary — base persona + JD (fast LLM, first pass only)
+    2. Tailor resume — base_resume + JD only (no RAG chunks, avoids hallucination)
+    3. Generate STAR stories — matched_experiences + JD (RAG evidence used here)
 
     Args:
         state: Current GraphState. Requires base_resume_content,
@@ -296,7 +375,7 @@ def resume_tailor_node(state: GraphState) -> dict:
             review_result for revision feedback.
 
     Returns:
-        Dict with keys: draft_content (str), star_stories (list[dict]).
+        Dict with keys: persona_summary, draft_content, star_stories, tailor_reasoning.
     """
     print("\n[Node 2] Tailoring resume (base resume + JD only)...")
     print(f"  base_resume_content length: {len(state.get('base_resume_content', ''))}")
@@ -316,6 +395,20 @@ def resume_tailor_node(state: GraphState) -> dict:
         state.get("jd_requirements") or {}
     ).get("role", "the target role")
 
+    # Step 1: Generate persona summary (only on first pass, not revisions)
+    persona_summary = state.get("persona_summary", "")
+    if not persona_summary:
+        print("  [Persona] Generating persona summary...")
+        persona_summary = _generate_persona(
+            state["jd_requirements"],
+            target_role,
+        )
+        if persona_summary:
+            print(f"  [Persona] Summary: {persona_summary}")
+        else:
+            print("  [Persona] No summary generated.")
+
+    # Step 2: Tailor resume
     tailored, reasoning = _tailor_resume(
         state["base_resume_content"],
         state["jd_requirements"],
@@ -324,9 +417,15 @@ def resume_tailor_node(state: GraphState) -> dict:
     )
     if reasoning:
         print(f"  Reasoning:\n{reasoning}")
+
+    # Step 3: Inject persona summary at top of tailored resume
+    if persona_summary:
+        tailored = _inject_persona_into_resume(tailored, persona_summary)
+
     print(f"  Draft length: {len(tailored)} chars")
 
     return {
+        "persona_summary": persona_summary,
         "draft_content": tailored,
         "star_stories": [],
         "tailor_reasoning": reasoning,
@@ -382,6 +481,7 @@ if __name__ == "__main__":
             "jd_requirements": sample_jd,
             "matched_experiences": [sample_experience],
             "gaps": [],
+            "persona_summary": "",
             "draft_content": "",
             "star_stories": [],
             "review_result": None,

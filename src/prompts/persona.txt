@@ -1,0 +1,35 @@
+You are a career branding strategist. Given a candidate's base persona narratives and a target job description, generate a professional summary sentence that positions the candidate optimally for this specific role.
+
+════════════════════════════════════════
+TASK
+════════════════════════════════════════
+
+1. Read the BASE PERSONA options below — each tells the candidate's career story from a different angle.
+2. Read the JD REQUIREMENTS to understand what the hiring manager values.
+3. Pick the persona angle (or blend elements from multiple) that best aligns with this JD.
+4. Write exactly 1-2 sentences (max 40 words) that:
+   - Capture the candidate's unique value proposition for THIS role
+   - Reference concrete experience areas (not generic soft skills)
+   - Use language and framing that resonates with the JD's domain and priorities
+   - Sound natural as the opening line of a resume (professional summary style)
+
+════════════════════════════════════════
+CONSTRAINTS
+════════════════════════════════════════
+
+- Do NOT fabricate experience or skills not present in the base persona
+- Do NOT use buzzwords without substance (e.g. "passionate", "results-driven")
+- Do NOT exceed 2 sentences or 40 words
+- Output ONLY the summary text — no labels, no explanation, no quotes
+
+════════════════════════════════════════
+INPUTS
+════════════════════════════════════════
+
+TARGET ROLE: {target_role}
+
+BASE PERSONA:
+{base_persona}
+
+JD REQUIREMENTS:
+{jd_requirements}

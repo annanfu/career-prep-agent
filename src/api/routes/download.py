@@ -60,6 +60,34 @@ def download_prep(filename: str) -> FileResponse:
     )
 
 
+@router.get("/cover-letter/{filename}")
+def download_cover_letter(filename: str) -> FileResponse:
+    """Download a generated cover letter from output/resumes/.
+
+    Args:
+        filename: Cover letter filename.
+
+    Returns:
+        FileResponse forcing a download.
+    """
+    path = Path("output/resumes") / filename
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Cover letter not found: {filename}",
+        )
+    return FileResponse(
+        path=str(path),
+        filename=filename,
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"'
+            ),
+        },
+    )
+
+
 @router.get("/tex/{filename}")
 def download_tex(filename: str) -> FileResponse:
     """Download a generated .tex resume from output/resumes/.

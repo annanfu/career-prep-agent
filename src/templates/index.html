@@ -67,6 +67,15 @@
                      text-white font-medium text-sm py-2 px-5 rounded-lg transition">
         Generate Tailored Resume
       </button>
+      <button type="button" id="cl-btn"
+              hx-post="/api/pipeline/generate-cover-letter" hx-include="#resume-editor"
+              hx-target="#cover-letter-output" hx-swap="innerHTML"
+              hx-on::before-request="this.disabled=true; this.textContent='Generating...'"
+              hx-on::after-request="this.disabled=false; this.textContent='Generate Cover Letter'"
+              class="bg-stone-700 hover:bg-stone-800 disabled:bg-stone-400
+                     text-white font-medium text-sm py-2 px-5 rounded-lg transition">
+        Generate Cover Letter
+      </button>
       <div id="pipeline-spinner" class="htmx-indicator flex items-center gap-2 text-sm text-stone-400">
         <svg class="animate-spin h-4 w-4 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
